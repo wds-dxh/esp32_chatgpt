@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-13 22:20:59
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-10 17:32:30
+ * @LastEditTime: 2024-12-10 21:57:31
  * @FilePath: /arduino-esp32/include/PINS.h
  * @Description: 定义使用的引脚
  * 微信: 15310638214 
@@ -34,6 +34,11 @@
 #define DEFAULT_BCK_PIN         4       //用于同步时钟
 #define DEFAULT_WS_PIN          15      //片选引脚
 #define DEFAULT_DATA_IN_PIN     22      //数据输入引脚
+
+//定义speaker引脚
+#define I2S_DOUT 25 // DIN引脚
+#define I2S_BCLK 27 // BCLK引脚
+#define I2S_LRC 26  // LRC引脚
 
 #endif // PINS_H
 
