@@ -8,5 +8,6 @@
 ### 
 # 进入/home/wds/workspace/now/Driving_module/目录
 git add .
+git pull
 git commit -m "update_$(date +'%Y-%m-%d %H:%M:%S')_$1"
 git push -u origin dev
