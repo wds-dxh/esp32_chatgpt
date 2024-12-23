@@ -24,7 +24,7 @@
 #include "PINS.h"
 
 // 默认参数定义
-#define DEFAULT_I2S_NUM         I2S_NUM_0
+#define DEFAULT_I2S_NUM         I2S_NUM_0   //esp32 s3 一共有两个I2S接口
 #define DEFAULT_SAMPLE_RATE     16000      // 讯飞 STT 推荐的采样率为 16kHz
 #define DEFAULT_BITS_PER_SAMPLE I2S_BITS_PER_SAMPLE_16BIT   // 16位,讯飞 STT 推荐的位宽为 16 位
 #define DEFAULT_CHANNEL_FORMAT  I2S_CHANNEL_FMT_ONLY_LEFT   // 只使用左声道
@@ -35,6 +35,18 @@
 class MicRecorder {
 public:
     // 构造函数
+
+    /**
+     * @description: 麦克风录音模块构造函数
+     * @param {uint32_t} sampleRate 采样率
+     * @param {i2s_bits_per_sample_t} bitsPerSample 位深
+     * @param {i2s_channel_fmt_t} channelFormat 通道格式
+     * @param {i2s_comm_format_t} commFormat 通信格式
+     * @param {int} bckPin BCK 引脚
+     * @param {int} wsPin WS 引脚
+     * @param {int} dataInPin DATA IN 引脚
+     * @return {*} 
+     */    
     MicRecorder(uint32_t sampleRate = DEFAULT_SAMPLE_RATE,
                 i2s_bits_per_sample_t bitsPerSample = DEFAULT_BITS_PER_SAMPLE,
                 i2s_channel_fmt_t channelFormat = DEFAULT_CHANNEL_FORMAT,
@@ -45,8 +57,7 @@ public:
 
     // 初始化 I2S
     bool begin();
-
-    // 读取 PCM 数据
+ 
     size_t readPCM(int16_t* buffer, size_t maxSamples);
 
     // 设置参数函数
@@ -74,6 +85,7 @@ private:
 };
 
 // 实现部分
+
 
 MicRecorder::MicRecorder(uint32_t sampleRate,
                          i2s_bits_per_sample_t bitsPerSample,
