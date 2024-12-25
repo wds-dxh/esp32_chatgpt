@@ -72,7 +72,7 @@ public:
     
     // 音频监测
     float getCurrentVolume();  // 获取当前音量
-    bool isVoiceDetected();   // 检测是否有声音输入
+    bool isVoiceDetected();   // 检测是否有声音输入 使用rms和zcr
 
     // ------------------- 设置参数函数 -------------------
     void setSampleRate(uint32_t sampleRate);
@@ -183,7 +183,7 @@ MicRecorder::MicRecorder(i2s_port_t i2sNum,
       _dataInPin(dataInPin),
       _isRecording(false),
       _gain(1.0f),
-      _voiceThreshold(0.0f)
+      _voiceThreshold(50.0f)
 {
     // 构造函数中可进行一些自定义操作
 }

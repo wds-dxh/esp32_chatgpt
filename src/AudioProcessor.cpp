@@ -1,4 +1,4 @@
-#include "AudioProcessor.hpp"
+#include "AudioProcessor/AudioProcessor.hpp"
 #include <vector>
 #include <string.h> // for memset, memcpy
 
@@ -345,10 +345,12 @@ bool AudioProcessor::detectVoiceActivity(const int16_t* samples, size_t sampleCo
     if (!samples || sampleCount == 0) return false;
 
     float rms  = calculateRMS(samples, sampleCount);
-    float zcr  = calculateZeroCrossingRate(samples, sampleCount);
+    float zcr  = calculateZeroCrossingRate(samples, sampleCount);   // 计算过零率
+
+    // Serial.printf("RMS: %.2f, ZCR: %.2f\n", rms, zcr);  //用于调试阈值
     // 简单逻辑：RMS>threshold + ZCR在一个合适范围  => 有语音
-    return (rms > threshold) && (zcr >= 0.1f && zcr <= 0.9f);
-}
+    return (rms > threshold) && (zcr >= 0.0f && zcr <= 0.9f); 
+    }
 
 // ======================== 音频分析 ========================
 float AudioProcessor::calculateZeroCrossingRate(const int16_t* samples, size_t sampleCount) {

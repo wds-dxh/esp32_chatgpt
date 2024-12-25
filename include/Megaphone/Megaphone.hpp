@@ -361,7 +361,7 @@ void Megaphone::playFromFile(const char* filename) {
     while ((bytesRead = audioFile.read((uint8_t*)buffer, sizeof(buffer))) > 0) {
         size_t samples = bytesRead / sizeof(int16_t);
         // 阻塞播放 (也可改用 queuePCM 让后台播放)
-        AudioProcessor :: applyGain(buffer, samples, _ampGain);
+        AudioProcessor::applyGain(buffer, samples, _ampGain);
         playPCM(buffer, samples);
     }
 
