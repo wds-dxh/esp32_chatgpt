@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-12-08 12:57:58
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-23 17:31:27
+ * @LastEditTime: 2024-12-25 11:07:19
  * @FilePath: /arduino-esp32/include/ESPAsyncWebServer/web_server.hpp
  * @Description: 
  * 微信: 15310638214 
@@ -54,6 +54,31 @@ private:
 
     void loadWifi(AsyncWebServerRequest *request);                        // 显示wifi列表的路由
 
+    // 添加缓存存储
+    struct {
+        int numWifi = 0;
+        std::vector<std::pair<String, String>> wifiCredentials;
+        bool isDirty = true;  // 标记是否需要重新从flash读取
+    } cache;
+
+    // 新增方法：从flash加载所有WiFi信息到缓存
+    void loadWifiFromFlash() {
+        if (!cache.isDirty) return;  // 如果缓存有效，直接返回
+        
+        Preferences preferences;
+        preferences.begin("wifi", true);  // 只读模式
+        cache.numWifi = preferences.getInt("numWifi", 0);
+        cache.wifiCredentials.clear();
+        
+        for(int i = 0; i < cache.numWifi; i++) {
+            String ssid = preferences.getString(("ssid" + String(i)).c_str(), "");
+            String password = preferences.getString(("password" + String(i)).c_str(), "");
+            cache.wifiCredentials.push_back({ssid, password});
+        }
+        preferences.end();
+        cache.isDirty = false;
+    }
+
 public:
     WiFi_Network_Configuration(String apSsid, String apPassword);          // 构造函数
 
@@ -81,33 +106,16 @@ WiFi_Network_Configuration::WiFi_Network_Configuration(String apSsid, String apP
 
 bool WiFi_Network_Configuration::connectWifi()
 {   
-    Preferences preferences; // 用于存储和读取ESP32的闪存(flash)
-    // 从闪存中读取wifi信息
-    preferences.begin("wifi", false);
-    int numWifi = preferences.getInt("numWifi", 0);
+    loadWifiFromFlash();  // 加载WiFi信息到缓存
     
-    // 读取wifi信息
-    for(int i = 0; i < numWifi; i++)
-    {
-        ssid = preferences.getString(("ssid" + String(i)).c_str(), ""); //参数1：key，参数2：默认值
-        password = preferences.getString(("password" + String(i)).c_str(), "");
-        // Serial.println("ssid: " + ssid + " password: " + password);
-        // 连接wifi
-        WiFi.begin(ssid.c_str(), password.c_str());
-        // 等待连接成功
+    for(const auto& wifi : cache.wifiCredentials) {
+        WiFi.begin(wifi.first.c_str(), wifi.second.c_str());
         int count = 0;
-        while (WiFi.status() != WL_CONNECTED)
-        {
-            vTaskDelay(100);    // 等待100ms
+        while (WiFi.status() != WL_CONNECTED && count < 10) {
+            vTaskDelay(100);
             count++;
-            if(count > 10)
-            {
-                Serial.println("连接wifi失败");
-                break;
-            }
         }
-        if(WiFi.status() == WL_CONNECTED)
-        {
+        if(WiFi.status() == WL_CONNECTED) {
             return true;
         }
     }
@@ -174,26 +182,27 @@ void WiFi_Network_Configuration::wifiPage(AsyncWebServerRequest *request)
 }
 
 void WiFi_Network_Configuration::saveWifiSuccessfully(AsyncWebServerRequest *request) {
-    // 从请求中获取WiFi信息
     if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
         String ssid = request->getParam("ssid", true)->value();
         String password = request->getParam("password", true)->value();
         
-        // 保存到Preferences
+        loadWifiFromFlash();  // 确保缓存是最新的
+        
         Preferences preferences;
         preferences.begin("wifi", false);
-        int numWifi = preferences.getInt("numWifi", 0);
         
-        // 保存新的WiFi信息
-        preferences.putString(("ssid" + String(numWifi)).c_str(), ssid);
-        preferences.putString(("password" + String(numWifi)).c_str(), password);
-        preferences.putInt("numWifi", numWifi + 1);
+        // 更新缓存
+        cache.wifiCredentials.push_back({ssid, password});
+        cache.numWifi++;
+        
+        // 一次性写入flash
+        preferences.putString(("ssid" + String(cache.numWifi - 1)).c_str(), ssid);
+        preferences.putString(("password" + String(cache.numWifi - 1)).c_str(), password);
+        preferences.putInt("numWifi", cache.numWifi);
         preferences.end();
         
-        // 尝试连接新的WiFi
         WiFi.begin(ssid.c_str(), password.c_str());
     }
-    
     request->send(200, "text/html", SAVE_WIFI_SUCCESSFULLY_PAGE);
 }
 
@@ -201,63 +210,59 @@ void WiFi_Network_Configuration::deleteWifiSuccessfully(AsyncWebServerRequest *r
     if (request->hasParam("ssid", true)) {
         String ssid = request->getParam("ssid", true)->value();
         
-        // 从Preferences中删除指定的WiFi
-        Preferences preferences;
-        preferences.begin("wifi", false);
-        int numWifi = preferences.getInt("numWifi", 0);
+        loadWifiFromFlash();  // 确保缓存是最新的
         
-        // 查找并删除指定的WiFi
-        for (int i = 0; i < numWifi; i++) {
-            String currentSsid = preferences.getString(("ssid" + String(i)).c_str(), "");
-            if (currentSsid == ssid) {
-                // 移动后面的WiFi信息前移
-                for (int j = i; j < numWifi - 1; j++) {
-                    String nextSsid = preferences.getString(("ssid" + String(j + 1)).c_str(), "");
-                    String nextPassword = preferences.getString(("password" + String(j + 1)).c_str(), "");
-                    preferences.putString(("ssid" + String(j)).c_str(), nextSsid);
-                    preferences.putString(("password" + String(j)).c_str(), nextPassword);
+        // 在缓存中查找并删除
+        for (size_t i = 0; i < cache.wifiCredentials.size(); i++) {
+            if (cache.wifiCredentials[i].first == ssid) {
+                cache.wifiCredentials.erase(cache.wifiCredentials.begin() + i);
+                cache.numWifi--;
+                
+                // 一次性重写所有数据到flash
+                Preferences preferences;
+                preferences.begin("wifi", false);
+                for (size_t j = 0; j < cache.wifiCredentials.size(); j++) {
+                    preferences.putString(("ssid" + String(j)).c_str(), cache.wifiCredentials[j].first);
+                    preferences.putString(("password" + String(j)).c_str(), cache.wifiCredentials[j].second);
                 }
-                preferences.putInt("numWifi", numWifi - 1);
+                preferences.putInt("numWifi", cache.numWifi);
+                preferences.end();
                 break;
             }
         }
-        preferences.end();
     }
-    
     request->send(200, "text/html", DELETE_WIFI_SUCCESSFULLY_PAGE);
 }
 
 void WiFi_Network_Configuration::deleteAllWifiSuccessfully(AsyncWebServerRequest *request) {
-    // 删除所有保存的WiFi信息
+    // 清空缓存
+    cache.wifiCredentials.clear();
+    cache.numWifi = 0;
+    cache.isDirty = false;
+    
+    // 清空flash
     Preferences preferences;
     preferences.begin("wifi", false);
     preferences.clear();
     preferences.end();
     
-    // 断开当前WiFi连接
     WiFi.disconnect();
-    
-    // 设置为AP模式
     WiFi.mode(WIFI_AP);
     WiFi.softAP(apSsid.c_str(), apPassword.c_str());
-        
+    
     request->send(200, "text/html", DELETE_ALL_WIFI_SUCCESSFULLY_PAGE);
 }
 
 void WiFi_Network_Configuration::loadWifi(AsyncWebServerRequest *request) {
-    Preferences preferences;
-    preferences.begin("wifi", true);  // 只读模式打开
-    int numWifi = preferences.getInt("numWifi", 0);
+    loadWifiFromFlash();  // 从flash加载到缓存
     
     String wifiList = "";
-    for(int i = 0; i < numWifi; i++) {  
-        String ssid = preferences.getString(("ssid" + String(i)).c_str(), "");
-        wifiList += "<div class='wifi-item'>SSID: " + ssid + "</div>";
+    for(const auto& wifi : cache.wifiCredentials) {
+        wifiList += "<div class='wifi-item'>SSID: " + wifi.first + "</div>";
     }
-    preferences.end();
     
     String html = WIFI_LIST_PAGE;
-    html.replace("%WIFI_LIST%", wifiList);  // 替换html中的%WIFI_LIST%为wifiList
+    html.replace("%WIFI_LIST%", wifiList);
     request->send(200, "text/html", html);
 }
 

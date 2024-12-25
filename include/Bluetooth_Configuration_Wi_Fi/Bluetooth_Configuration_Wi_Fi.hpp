@@ -7,6 +7,7 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
+#include <vector>
 
 class Bluetooth_Configuration_Wi_Fi {
 private:
@@ -33,6 +34,31 @@ private:
 
     // 处理接收到的数据
     void handleReceivedData(const std::string &data);
+
+    // 添加缓存
+    struct {
+        std::vector<std::pair<String, String>> wifiCredentials;
+        int numWifi = 0;
+        bool isDirty = true;
+    } cache;
+
+    // 新增方法：从flash加载WiFi信息到缓存
+    void loadWifiFromFlash() {
+        if (!cache.isDirty) return;
+        
+        Preferences preferences;
+        preferences.begin("wifi", true);
+        cache.numWifi = preferences.getInt("numWifi", 0);
+        cache.wifiCredentials.clear();
+        
+        for(int i = 0; i < cache.numWifi; i++) {
+            String ssid = preferences.getString(("ssid" + String(i)).c_str(), "");
+            String password = preferences.getString(("password" + String(i)).c_str(), "");
+            cache.wifiCredentials.push_back({ssid, password});
+        }
+        preferences.end();
+        cache.isDirty = false;
+    }
 
 public:
     // 构造函数
@@ -62,7 +88,7 @@ void Bluetooth_Configuration_Wi_Fi::CharacteristicCallbacks::onWrite(BLECharacte
 
 // 处理接收数据的方法实现
 void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) {
-    StaticJsonDocument<200> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, data);
 
     if (error) {
@@ -74,23 +100,23 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
     const char *password = doc["password"];
 
     if (ssid && password) {
+        loadWifiFromFlash();  // 确保缓存是最新的
+        
         Preferences preferences;
         preferences.begin("wifi", false);
         
-        // 获取当前保存的WiFi数量
-        int numWifi = preferences.getInt("numWifi", 0);
+        // 更新缓存
+        cache.wifiCredentials.push_back({String(ssid), String(password)});
+        cache.numWifi++;
         
-        // 保存新的WiFi信息
-        preferences.putString(("ssid" + String(numWifi)).c_str(), ssid);
-        preferences.putString(("password" + String(numWifi)).c_str(), password);
-        
-        // 更新WiFi数量
-        preferences.putInt("numWifi", numWifi + 1);
-        
+        // 一次性写入flash
+        preferences.putString(("ssid" + String(cache.numWifi - 1)).c_str(), ssid);
+        preferences.putString(("password" + String(cache.numWifi - 1)).c_str(), password);
+        preferences.putInt("numWifi", cache.numWifi);
         preferences.end();
 
         Serial.printf("WiFi凭证已保存: SSID=%s, 密码=%s\n", ssid, password);
-        Serial.printf("当前已保存 %d 个WiFi配置\n", numWifi + 1);
+        Serial.printf("当前已保存 %d 个WiFi配置\n", cache.numWifi);
 
         // 尝试连接WiFi
         Serial.println("正在尝试连接WiFi...");
@@ -153,19 +179,16 @@ void Bluetooth_Configuration_Wi_Fi::begin() {
 
 // 获取WiFi凭证
 void Bluetooth_Configuration_Wi_Fi::getCredentials(String &ssid, String &password) {
-    // 从Flash存储器中读取最新保存的WiFi凭证
-    Preferences preferences;    
-    preferences.begin("wifi", true);
-    int numWifi = preferences.getInt("numWifi", 0);
-    if (numWifi > 0) {
-        // 读取最后保存的WiFi信息
-        ssid = preferences.getString(("ssid" + String(numWifi - 1)).c_str(), "");
-        password = preferences.getString(("password" + String(numWifi - 1)).c_str(), "");
+    loadWifiFromFlash();
+    
+    if (!cache.wifiCredentials.empty()) {
+        const auto& lastWifi = cache.wifiCredentials.back();
+        ssid = lastWifi.first;
+        password = lastWifi.second;
     } else {
         ssid = "";
         password = "";
     }
-    preferences.end();
 } 
 
-#endif // BLUETOOTH_CONFIGURATION_WIFI_HPP 
+#endif // BLUETOOTH_CONFIGURATION_WIFI_HPP
