@@ -286,7 +286,7 @@ bool Megaphone::stopWriterTask() {
     return false;
 }
 
-// ------------ 播放 PCM 数据（原始阻塞） ------------
+// ------------ 播放 PCM 数据（原始阻塞）会附加增益 ------------
 size_t Megaphone::playPCM(const int16_t* buffer, size_t sampleCount) {
     if (!buffer || sampleCount == 0) return 0;
 

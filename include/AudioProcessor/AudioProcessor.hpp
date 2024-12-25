@@ -23,6 +23,7 @@ public:
     static void applyEcho(int16_t* samples, size_t sampleCount, float delay, float decay);
     static void applyReverb(int16_t* samples, size_t sampleCount, 
                             const float* impulseResponse, size_t irLength);
+                            
     static void applyCompressor(int16_t* samples, size_t sampleCount, 
                                 float threshold, float ratio, float attack, float release);
 
