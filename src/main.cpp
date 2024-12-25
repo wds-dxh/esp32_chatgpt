@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-20 18:34:23
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-25 10:56:53
+ * @LastEditTime: 2024-12-25 11:24:15
  * @FilePath: /arduino-esp32/src/main.cpp
  * @Description: 
  * 微信: 15310638214 
@@ -12,7 +12,8 @@
 #include <WiFi.h>
 #include "WiFi_Network_Configuration/WiFi_Network_Configuration.hpp"    //文件名称不更改是因为改了会报错，稀奇古怪的错误
 #include "Bluetooth_Configuration_Wi_Fi/Bluetooth_Configuration_Wi_Fi.hpp"
-
+#include "Megaphone/Megaphone.hpp"
+#include "MicRecorder/MicRecorder.hpp"
 
 WiFi_Network_Configuration webServer("AI-toys", "12345678");
 Bluetooth_Configuration_Wi_Fi bluetooth("AI-toys-ble");

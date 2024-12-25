@@ -191,8 +191,8 @@ bool MicRecorder::begin() {
         .channel_format = _channelFormat,
         .communication_format = _commFormat,
         .intr_alloc_flags = 0,
-        .dma_buf_count = (uint32_t)_dmaBufCount,
-        .dma_buf_len = (uint32_t)_dmaBufLen,
+        .dma_buf_count = _dmaBufCount,
+        .dma_buf_len = _dmaBufLen,
         .use_apll = false,
         .tx_desc_auto_clear = false,
         .fixed_mclk = 0

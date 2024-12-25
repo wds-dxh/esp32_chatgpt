@@ -53,6 +53,7 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "megaphone.hpp": "c"
+        "megaphone.hpp": "c",
+        "spiffs.h": "c"
     }
 }
