@@ -11,51 +11,21 @@
 #include <Arduino.h>
 #include <math.h>
 #include "driver/i2s.h"
+#include "AudioProcessor/AudioProcessor.hpp"
+
 
 // 如果你有自己的 PINS.h，用于定义引脚，可保留此处
 #include "PINS.h" 
 
-// ------------------- 默认参数定义 -------------------
-// 如果你自己的 PINS.h 中定义了这些宏，则可删掉下面的 #ifndef ... #define ...
-#ifndef MicRecorder_DEFAULT_BCK_PIN
-#define MicRecorder_DEFAULT_BCK_PIN         26
-#endif
 
-#ifndef MicRecorder_DEFAULT_WS_PIN
-#define MicRecorder_DEFAULT_WS_PIN          25
-#endif
-
-#ifndef MicRecorder_DEFAULT_DATA_IN_PIN
-#define MicRecorder_DEFAULT_DATA_IN_PIN     24
-#endif
-
-#ifndef MicRecorder_DEFAULT_I2S_NUM
 #define MicRecorder_DEFAULT_I2S_NUM         I2S_NUM_0   // ESP32 S3 一共有两个 I2S 接口
-#endif
-
-#ifndef MicRecorder_DEFAULT_SAMPLE_RATE
 #define MicRecorder_DEFAULT_SAMPLE_RATE     16000       // 16kHz，一般的语音识别采样率
-#endif
-
-#ifndef MicRecorder_DEFAULT_BITS_PER_SAMPLE
 #define MicRecorder_DEFAULT_BITS_PER_SAMPLE I2S_BITS_PER_SAMPLE_16BIT // 16位，一般的语音识别位深
-#endif
-
-#ifndef MicRecorder_DEFAULT_CHANNEL_FORMAT
 #define MicRecorder_DEFAULT_CHANNEL_FORMAT  I2S_CHANNEL_FMT_ONLY_LEFT  // 只使用左声道
-#endif
-
-#ifndef MicRecorder_DEFAULT_COMM_FORMAT
 #define MicRecorder_DEFAULT_COMM_FORMAT     I2S_COMM_FORMAT_STAND_I2S  // 标准 I2S 通信模式
-#endif
-
-#ifndef MicRecorder_DEFAULT_DMA_BUF_COUNT
 #define MicRecorder_DEFAULT_DMA_BUF_COUNT   16  // DMA 缓冲区数量
-#endif
-
-#ifndef MicRecorder_DEFAULT_DMA_BUF_LEN
 #define MicRecorder_DEFAULT_DMA_BUF_LEN     64  // DMA 缓冲区长度
-#endif
+
 
 /**
  * @brief 麦克风录音模块
@@ -86,11 +56,8 @@ public:
                 int wsPin = MicRecorder_DEFAULT_WS_PIN,
                 int dataInPin = MicRecorder_DEFAULT_DATA_IN_PIN);
 
-    /**
-     * @brief 初始化 I2S
-     * @return true 表示初始化成功，false 表示失败
-     */
     bool begin();
+    ~MicRecorder(); // 析构函数
 
     /**
      * @brief 从 I2S DMA 中读取 PCM 数据
@@ -100,12 +67,22 @@ public:
      */
     size_t readPCM(int16_t* buffer, size_t maxSamples);
 
+        // 音频数据读取
+    size_t readPCMProcessed(int16_t* buffer, size_t maxSamples, bool autoGain = true);
+    
+    // 音频监测
+    float getCurrentVolume();  // 获取当前音量
+    bool isVoiceDetected();   // 检测是否有声音输入
+
     // ------------------- 设置参数函数 -------------------
     void setSampleRate(uint32_t sampleRate);
     void setBitsPerSample(i2s_bits_per_sample_t bitsPerSample);
     void setChannelFormat(i2s_channel_fmt_t channelFormat);
     void setCommFormat(i2s_comm_format_t commFormat);
     void setPins(int bckPin, int wsPin, int dataInPin);
+    // 设置参数
+    void setGain(float gain);  // 设置增益
+    void setVoiceDetectionThreshold(float threshold);   
 
     // ------------------- 音频信号处理函数 -------------------
     /**
@@ -114,7 +91,9 @@ public:
      * @param sampleCount 音频数据的采样数量
      * @return 计算得到的 RMS 值
      */
-    float calculateRMS(const int16_t* samples, size_t sampleCount);
+    inline float calculateRMS(const int16_t* samples, size_t sampleCount) {
+        return AudioProcessor::calculateRMS(samples, sampleCount);
+    }
 
     /**
      * @brief 对音频数据应用增益
@@ -122,7 +101,9 @@ public:
      * @param sampleCount 音频数据的采样数量
      * @param gain 增益值 (如 0.5, 2.0)
      */
-    void applyGain(int16_t* samples, size_t sampleCount, float gain);
+    inline void applyGain(int16_t* samples, size_t sampleCount, float gain) {
+        AudioProcessor::applyGain(samples, sampleCount, gain);
+    }
 
     /**
      * @brief 对音频数据进行归一化
@@ -130,7 +111,9 @@ public:
      * @param sampleCount 音频数据的采样数量
      * @param maxAmplitude 归一化目标最大值，默认为 32767
      */
-    void normalizeBuffer(int16_t* samples, size_t sampleCount, int16_t maxAmplitude = 32767);
+    inline void normalizeBuffer(int16_t* samples, size_t sampleCount, int16_t maxAmplitude = 32767) {
+        AudioProcessor::normalize(samples, sampleCount, maxAmplitude);
+    }
 
     /**
      * @brief 将 int16_t 数据转换为浮点数(-1.0~1.0)
@@ -138,8 +121,19 @@ public:
      * @param output 输出的 float 音频数据
      * @param sampleCount 音频数据的采样数量
      */
-    void convertInt16ToFloat(const int16_t* input, float* output, size_t sampleCount);
+    inline void convertInt16ToFloat(const int16_t* input, float* output, size_t sampleCount) {
+        if (!input || !output || sampleCount == 0) return;
 
+        for (size_t i = 0; i < sampleCount; i++) {
+            output[i] = (float)input[i] / 32768.0f; // 32768 = 2^15
+        }
+    }
+
+    // 优化的音频采集接口
+    bool startRecording();  // 开始录音
+    bool stopRecording();   // 停止录音
+    bool isRecording() const; // 是否正在录音
+    
 private:
     // I2S 配置相关
     i2s_port_t             _i2s_num;       // I2S 端口号
@@ -154,6 +148,15 @@ private:
     int                    _bckPin;        // BCK 引脚
     int                    _wsPin;         // WS 引脚
     int                    _dataInPin;     // DATA IN 引脚
+
+    // 成员变量
+    bool _isRecording;  // 是否正在录音
+    float _gain;        // 增益 
+    float _voiceThreshold;  // 语音检测阈值
+
+    // 私有工具方法
+    bool initI2S();
+    void processAudioBuffer(int16_t* buffer, size_t sampleCount);
 };
 
 // ====================== 实现部分 ======================
@@ -177,12 +180,23 @@ MicRecorder::MicRecorder(i2s_port_t i2sNum,
       _dmaBufLen(dmaBufLen),
       _bckPin(bckPin),
       _wsPin(wsPin),
-      _dataInPin(dataInPin)
+      _dataInPin(dataInPin),
+      _isRecording(false),
+      _gain(1.0f),
+      _voiceThreshold(0.0f)
 {
     // 构造函数中可进行一些自定义操作
 }
 
 bool MicRecorder::begin() {
+    return initI2S();
+}
+
+MicRecorder::~MicRecorder() {
+    i2s_driver_uninstall(_i2s_num);
+}
+
+bool MicRecorder::initI2S() {   
     // I2S 配置
     i2s_config_t i2s_config = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
@@ -225,6 +239,22 @@ bool MicRecorder::begin() {
     return true;
 }
 
+bool MicRecorder::startRecording() {
+    if (_isRecording) return false;
+    _isRecording = true;
+    return true;
+}
+
+bool MicRecorder::stopRecording() {
+    if (!_isRecording) return false;
+    _isRecording = false;
+    return true;
+}
+
+bool MicRecorder::isRecording() const {
+    return _isRecording;
+}
+
 size_t MicRecorder::readPCM(int16_t* buffer, size_t maxSamples) {
     if (!buffer || maxSamples == 0) return 0;
 
@@ -240,6 +270,42 @@ size_t MicRecorder::readPCM(int16_t* buffer, size_t maxSamples) {
 
     // 返回读取到的采样数量
     return bytesRead / sizeof(int16_t);
+}
+
+size_t MicRecorder::readPCMProcessed(int16_t* buffer, size_t maxSamples, bool autoGain) {
+    size_t samplesRead = readPCM(buffer, maxSamples);
+    if (samplesRead > 0) {
+        processAudioBuffer(buffer, samplesRead);
+        if (autoGain) {
+            applyGain(buffer, samplesRead, _gain);
+        }
+    }
+    return samplesRead;
+}
+
+void MicRecorder::processAudioBuffer(int16_t* buffer, size_t sampleCount) {
+    // 使用 AudioProcessor 进行处理
+    if (_gain != 1.0f) {
+        AudioProcessor::applyGain(buffer, sampleCount, _gain);
+    }
+    
+    // 添加降噪处理，很基本的降噪处理：低通滤波 + 噪声门限（低于阈值的部分置为0）
+    AudioProcessor::applyNoiseGate(buffer, sampleCount, _voiceThreshold);
+    
+    // 添加低通滤波
+    AudioProcessor::applyLowPassFilter(buffer, sampleCount, 8000.0f, _sampleRate);
+}
+
+float MicRecorder::getCurrentVolume() {
+    int16_t buffer[256];
+    size_t samplesRead = readPCM(buffer, 256);  //read 256 samples
+    return AudioProcessor::calculateRMS(buffer, samplesRead);
+}
+
+bool MicRecorder::isVoiceDetected() {
+    int16_t buffer[256];
+    size_t samplesRead = readPCM(buffer, 256);
+    return AudioProcessor::detectVoiceActivity(buffer, samplesRead, _voiceThreshold);
 }
 
 // ------------------- 设置参数函数 -------------------
@@ -260,56 +326,11 @@ void MicRecorder::setPins(int bckPin, int wsPin, int dataInPin) {
     _wsPin = wsPin;
     _dataInPin = dataInPin;
 }
-
-// ------------------- 音频信号处理函数 -------------------
-float MicRecorder::calculateRMS(const int16_t* samples, size_t sampleCount) {
-    if (!samples || sampleCount == 0) return 0.0f;
-
-    double sum = 0.0;
-    for (size_t i = 0; i < sampleCount; i++) {
-        float val = (float)samples[i];
-        sum += val * val;
-    }
-    double mean = sum / sampleCount;
-    return sqrt(mean);
+void MicRecorder::setGain(float gain) {
+    _gain = gain;
 }
-
-void MicRecorder::applyGain(int16_t* samples, size_t sampleCount, float gain) {
-    if (!samples || sampleCount == 0) return;
-
-    for (size_t i = 0; i < sampleCount; i++) {
-        int32_t temp = (int32_t)((float)samples[i] * gain);
-        // 防止溢出
-        if (temp > 32767)  temp = 32767;
-        if (temp < -32768) temp = -32768;
-        samples[i] = (int16_t)temp;
-    }
-}
-
-void MicRecorder::normalizeBuffer(int16_t* samples, size_t sampleCount, int16_t maxAmplitude) {
-    if (!samples || sampleCount == 0) return;
-
-    int16_t maxVal = 0;
-    for (size_t i = 0; i < sampleCount; i++) {
-        int16_t val = samples[i];
-        int16_t absVal = abs(val);
-        if (absVal > maxVal) {
-            maxVal = absVal;
-        }
-    }
-
-    if (maxVal == 0) return; // 避免除 0
-
-    float scale = (float)maxAmplitude / (float)maxVal;
-    applyGain(samples, sampleCount, scale);
-}
-
-void MicRecorder::convertInt16ToFloat(const int16_t* input, float* output, size_t sampleCount) {
-    if (!input || !output || sampleCount == 0) return;
-
-    for (size_t i = 0; i < sampleCount; i++) {
-        output[i] = (float)input[i] / 32768.0f; // 32768 = 2^15
-    }
+void MicRecorder::setVoiceDetectionThreshold(float threshold) {
+    _voiceThreshold = threshold;
 }
 
 #endif // MICRECORDER_HPP

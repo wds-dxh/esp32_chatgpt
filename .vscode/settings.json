@@ -54,6 +54,9 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "megaphone.hpp": "c",
-        "spiffs.h": "c"
+        "spiffs.h": "c",
+        "arduino.h": "c",
+        "audioprocessor.hpp": "c",
+        "i2s.h": "c"
     }
 }
