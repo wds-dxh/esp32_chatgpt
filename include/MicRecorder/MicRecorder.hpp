@@ -129,7 +129,7 @@ public:
         }
     }
 
-    // 优化的音频采集接口
+    // 优化的音频采集接口,待完善，还没有实现逻辑部分！ 
     bool startRecording();  // 开始录音
     bool stopRecording();   // 停止录音
     bool isRecording() const; // 是否正在录音

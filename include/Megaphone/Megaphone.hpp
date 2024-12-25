@@ -8,7 +8,7 @@
 
 #include "driver/i2s.h"
 #include "SPIFFS.h"
-#include "PINS.h"             // 确保这里定义了 Megaphone_DEFAULT_BCK_PIN、Megaphone_DEFAULT_WS_PIN、Megaphone_DEFAULT_DATA_OUT_PIN
+#include "PINS.h"
 #include "AudioProcessor/AudioProcessor.hpp"
 
 // ------------------- 默认参数定义 -------------------
@@ -20,11 +20,11 @@
 #define Megaphone_DEFAULT_DMA_BUF_COUNT   16
 #define Megaphone_DEFAULT_DMA_BUF_LEN     64
 
-// ========== 用于后台播放的音频数据包 ==========
+// 用于后台播放的音频数据包
 struct AudioChunk {
-    int16_t* data;    // 动态分配的采样数据指针
-    size_t   size;    // 采样点数量
-    bool     isLast;  // 是否是最后一个数据块，用于触发回调
+    int16_t* data;   // 动态分配的采样数据指针
+    size_t   size;   // 采样点数量
+    bool     isLast; // 是否是最后一个数据块，用于触发回调
 };
 
 /**
@@ -48,6 +48,10 @@ public:
 
     bool begin();
 
+    // 后台任务显式接口
+    bool startWriterTask();
+    bool stopWriterTask();
+
     // ------------------- 原始播放(阻塞) -------------------
     size_t playPCM(const int16_t* buffer, size_t sampleCount);
 
@@ -55,17 +59,9 @@ public:
     size_t playPCMProcessed(const int16_t* buffer, size_t sampleCount);
 
     // ------------------- 队列(非阻塞)播放接口 -------------------
-    /**
-     * @brief 把一段 PCM 数据放入队列，后台任务会自动播放
-     * @param buffer PCM 数据
-     * @param sampleCount 采样点数量
-     * @param isLast 是否为此段音频的最后一包，用于在播放结束后触发回调
-     * @return 实际放入队列的采样点数量(=0 表示队列已满或分配失败)
-     */
     size_t queuePCM(const int16_t* buffer, size_t sampleCount, bool isLast = false);
 
-    // ------------------- 从文件读取并播放 -------------------
-    // 以下演示仍是阻塞式读取文件，但可将数据用 queuePCM 推送到队列。示例不做循环队列式文件读取。
+    // ------------------- 从文件读取并播放(阻塞) -------------------
     void playFromFile(const char* filename);
 
     // ------------------- 设置参数函数 -------------------
@@ -76,36 +72,19 @@ public:
     void setPins(int bckPin, int wsPin, int dataOutPin);
     void setVolume(float gain);
 
-    // ------------------- 音频处理快速接口 -------------------
-    void applyGain(int16_t* samples, size_t sampleCount, float gain) {
-        AudioProcessor::applyGain(samples, sampleCount, gain);
-    }
-
-    // ... 还可直接调用 AudioProcessor::applyEqualizer(...) 等
-
-    // ------------------- 播放控制接口 -------------------
-    bool startPlaying();
-    bool stopPlaying();
+    // 播放控制接口（结合_isPlaying标志）
     bool isPlaying() const;
 
-    // ------------------- 音频效果和均衡器 -------------------
-    // 根据实际需求添加一些开关/参数，用于 processAudioBuffer() 内部调用
-    // 这里示例用布尔量来决定是否使用 Echo / Reverb / Compressor / EQ
+    // 音频效果开关
     void enableEcho(bool enable, float delaySeconds = 0.3f, float decay = 0.5f);
     void enableReverb(bool enable, const float* ir = nullptr, size_t irLen = 0);
     void enableCompressor(bool enable, float threshold=0.1f, float ratio=2.0f, float attack=0.01f, float release=0.1f);
-    // void enableEqualizer(bool enable, const float* eqBands = nullptr, size_t eqBandCount = 0);      // 未实现
 
-    // ------------------- 缓冲区控制 -------------------
+    // 缓冲区控制
     void clearBuffer();
-
-    /**
-     * @brief 获取队列可用空间(还可放多少个 AudioChunk)
-     * @return 当前可用队列槽位数
-     */
     size_t getBufferFree() const;
 
-    // ------------------- 事件回调 -------------------
+    // 事件回调
     using PlaybackCallback = void (*)(void* context);
     void setPlaybackCallback(PlaybackCallback callback, void* context = nullptr);
 
@@ -131,8 +110,11 @@ private:
     QueueHandle_t _audioQueue;       // 存储 AudioChunk 的队列
     static const int QUEUE_LEN = 8;  // 队列最大长度(可根据需要调整)
 
+    // 后台任务
+    TaskHandle_t _writerTaskHandle;
+
     // ============ 音效相关标志及参数 ============
-    bool   _echoEnabled;    
+    bool   _echoEnabled;
     float  _echoDelay;
     float  _echoDecay;
 
@@ -146,11 +128,6 @@ private:
     float  _compressorAttack;
     float  _compressorRelease;
 
-    bool   _eqEnabled;
-    const float* _eqBands;
-    size_t       _eqBandCount;
-
-    // 私有方法
     bool initI2S();
 
     /**
@@ -159,8 +136,8 @@ private:
     void processAudioBuffer(int16_t* buffer, size_t sampleCount);
 
     /**
-     * @brief 后台任务: 从队列取音频块 -> 处理 -> i2s_write -> 释放
-     */
+     * @brief 后台任务: 从队列取音频块 -> 在isPlaying为true时播放 -> 释放
+     */ 
     static void i2sWriterTask(void* parameter);
 };
 
@@ -193,6 +170,7 @@ Megaphone::Megaphone(uint32_t sampleRate,
       _callback(nullptr),
       _callbackContext(nullptr),
       _audioQueue(nullptr),
+      _writerTaskHandle(nullptr),
       _echoEnabled(false),
       _echoDelay(0.3f),
       _echoDecay(0.5f),
@@ -203,15 +181,12 @@ Megaphone::Megaphone(uint32_t sampleRate,
       _compressorThreshold(0.1f),
       _compressorRatio(2.0f),
       _compressorAttack(0.01f),
-      _compressorRelease(0.1f),
-      _eqEnabled(false),
-      _eqBands(nullptr),
-      _eqBandCount(0)
+      _compressorRelease(0.1f)
 {
 }
 
 Megaphone::~Megaphone() {
-    // 结束任务 & 删除队列
+    stopWriterTask(); // 确保后台任务先停止
     if (_audioQueue) {
         vQueueDelete(_audioQueue);
         _audioQueue = nullptr;
@@ -229,16 +204,7 @@ bool Megaphone::begin() {
         Serial.println("Megaphone: Failed to create audio queue!");
         return false;
     }
-
-    // 创建后台任务，用于从队列读取数据并播放
-    xTaskCreatePinnedToCore(i2sWriterTask, 
-                            "i2sWriterTask", 
-                            4096,  // 堆栈可根据需求调大
-                            this, 
-                            1,     // 优先级
-                            NULL, 
-                            0);    // 绑定到Core 0(或1)
-
+    Serial.println("Megaphone: begin() done. Please call startWriterTask() to run background playback task.");
     return true;
 }
 
@@ -283,6 +249,43 @@ bool Megaphone::initI2S() {
     return true;
 }
 
+// ------------ 后台任务的启动和停止 ------------
+bool Megaphone::startWriterTask() {
+    if (_writerTaskHandle) {
+        Serial.println("Megaphone: i2sWriterTask already running!");
+        return false;
+    }
+    if (!_audioQueue) {
+        Serial.println("Megaphone: No queue created, call begin() first!");
+        return false;
+    }
+    xTaskCreatePinnedToCore(
+        i2sWriterTask,
+        "i2sWriterTask",
+        4096,
+        this,
+        1,   // 优先级
+        &_writerTaskHandle,
+        0    // Core ID
+    );
+    if (_writerTaskHandle) {
+        Serial.println("Megaphone: i2sWriterTask started!");
+        return true;
+    }
+    Serial.println("Megaphone: Failed to create i2sWriterTask!");
+    return false;
+}
+
+bool Megaphone::stopWriterTask() {
+    if (_writerTaskHandle) {
+        vTaskDelete(_writerTaskHandle);
+        _writerTaskHandle = nullptr;
+        Serial.println("Megaphone: i2sWriterTask stopped!");
+        return true;
+    }
+    return false;
+}
+
 // ------------ 播放 PCM 数据（原始阻塞） ------------
 size_t Megaphone::playPCM(const int16_t* buffer, size_t sampleCount) {
     if (!buffer || sampleCount == 0) return 0;
@@ -307,7 +310,7 @@ size_t Megaphone::playPCMProcessed(const int16_t* buffer, size_t sampleCount) {
     processAudioBuffer(tmp, sampleCount);
 
     size_t written = playPCM(tmp, sampleCount);
-    free(tmp);  // 释放临时内存
+    free(tmp);
     return written;
 }
 
@@ -315,7 +318,6 @@ size_t Megaphone::playPCMProcessed(const int16_t* buffer, size_t sampleCount) {
 size_t Megaphone::queuePCM(const int16_t* buffer, size_t sampleCount, bool isLast) {
     if (!_audioQueue || !buffer || sampleCount == 0) return 0;
 
-    // 分配内存拷贝数据
     int16_t* dataCopy = (int16_t*)malloc(sampleCount * sizeof(int16_t));
     if (!dataCopy) {
         Serial.println("Megaphone: Malloc failed in queuePCM!");
@@ -323,17 +325,16 @@ size_t Megaphone::queuePCM(const int16_t* buffer, size_t sampleCount, bool isLas
     }
     memcpy(dataCopy, buffer, sampleCount*sizeof(int16_t));
 
-    AudioChunk chunk;   
+    AudioChunk chunk;
     chunk.data  = dataCopy;
     chunk.size  = sampleCount;
     chunk.isLast = isLast;
 
-    // 尝试入队(立即返回，不阻塞)
+    // 这里使用0超时(不阻塞)或portMAX_DELAY都可，看你需求
+    // 若用0则队列满时立即失败
     if (xQueueSend(_audioQueue, &chunk, 0) == pdTRUE) {
-        // 入队成功
         return sampleCount;
     } else {
-        // 队列满了
         free(dataCopy);
         return 0;
     }
@@ -359,8 +360,8 @@ void Megaphone::playFromFile(const char* filename) {
 
     while ((bytesRead = audioFile.read((uint8_t*)buffer, sizeof(buffer))) > 0) {
         size_t samples = bytesRead / sizeof(int16_t);
-        // 调用阻塞接口(或你也可以用 queuePCM 推送到后台)
-        applyGain(buffer, samples, _ampGain);
+        // 阻塞播放 (也可改用 queuePCM 让后台播放)
+        AudioProcessor :: applyGain(buffer, samples, _ampGain);
         playPCM(buffer, samples);
     }
 
@@ -391,15 +392,7 @@ void Megaphone::setVolume(float gain) {
     _ampGain = gain;
 }
 
-// ------------ 播放控制 ------------
-bool Megaphone::startPlaying() {
-    _isPlaying = true;
-    return true;
-}
-bool Megaphone::stopPlaying() {
-    _isPlaying = false;
-    return true;
-}
+// ------------ 播放控制(isPlaying标志) ------------
 bool Megaphone::isPlaying() const {
     return _isPlaying;
 }
@@ -410,13 +403,11 @@ void Megaphone::enableEcho(bool enable, float delaySeconds, float decay) {
     _echoDelay   = delaySeconds;
     _echoDecay   = decay;
 }
-
 void Megaphone::enableReverb(bool enable, const float* ir, size_t irLen) {
     _reverbEnabled  = enable;
     _reverbImpulse  = ir;
     _reverbLen      = irLen;
 }
-
 void Megaphone::enableCompressor(bool enable, float threshold, float ratio, float attack, float release) {
     _compressorEnabled  = enable;
     _compressorThreshold= threshold;
@@ -424,12 +415,6 @@ void Megaphone::enableCompressor(bool enable, float threshold, float ratio, floa
     _compressorAttack   = attack;
     _compressorRelease  = release;
 }
-
-// void Megaphone::enableEqualizer(bool enable, const float* eqBands, size_t eqBandCount) { // 未实现
-//     _eqEnabled   = enable;
-//     _eqBands     = eqBands;
-//     _eqBandCount = eqBandCount;
-// }
 
 // ------------ 清空DMA缓冲 ------------
 void Megaphone::clearBuffer() {
@@ -440,7 +425,6 @@ void Megaphone::clearBuffer() {
 // ------------ 获取队列可用空间 ------------
 size_t Megaphone::getBufferFree() const {
     if (!_audioQueue) return 0;
-    // 返回当前队列中还可放多少个 AudioChunk
     return uxQueueSpacesAvailable(_audioQueue);
 }
 
@@ -456,42 +440,34 @@ void Megaphone::processAudioBuffer(int16_t* buffer, size_t sampleCount) {
     if (_ampGain != 1.0f) {
         AudioProcessor::applyGain(buffer, sampleCount, _ampGain);
     }
-
-    // // 2. 均衡器
-    // if (_eqEnabled && _eqBands && _eqBandCount > 0) {
-    //     AudioProcessor::applyEqualizer(buffer, sampleCount, _eqBands, _eqBandCount);
-    // }
-
-    // 3. 压缩
+    // 2. 压缩
     if (_compressorEnabled) {
-        AudioProcessor::applyCompressor(buffer, sampleCount, 
-                                        _compressorThreshold, _compressorRatio, 
+        AudioProcessor::applyCompressor(buffer, sampleCount,
+                                        _compressorThreshold, _compressorRatio,
                                         _compressorAttack, _compressorRelease);
     }
-
-    // 4. 回声
+    // 3. 回声
     if (_echoEnabled) {
         AudioProcessor::applyEcho(buffer, sampleCount, _echoDelay, _echoDecay);
     }
-
-    // 5. 混响
+    // 4. 混响
     if (_reverbEnabled && _reverbImpulse && _reverbLen > 0) {
         AudioProcessor::applyReverb(buffer, sampleCount, _reverbImpulse, _reverbLen);
     }
 }
 
-// ------------ 后台任务: 从队列取数据 -> process -> i2s_write ------------
+// ------------ 后台任务 ------------
 void Megaphone::i2sWriterTask(void* parameter) {
     Megaphone* self = static_cast<Megaphone*>(parameter);
     while (true) {
         AudioChunk chunk;
-        // 等待队列里有数据
+        // 阻塞等待队列数据
         if (xQueueReceive(self->_audioQueue, &chunk, portMAX_DELAY) == pdTRUE) {
             if (!chunk.data || chunk.size == 0) {
-                // 如果数据异常，直接丢弃
                 if (chunk.data) free(chunk.data);
                 continue;
             }
+
             // 处理(音量/效果等)
             self->processAudioBuffer(chunk.data, chunk.size);
 
@@ -504,6 +480,8 @@ void Megaphone::i2sWriterTask(void* parameter) {
 
             // 如果是最后一块，则触发回调(如果已设置)
             if (chunk.isLast && self->_callback) {
+                self->_isPlaying = false;
+                
                 self->_callback(self->_callbackContext);
             }
         }
