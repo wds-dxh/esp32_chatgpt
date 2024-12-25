@@ -1,8 +1,8 @@
 /*
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-12-08 17:32:50
- * @LastEditors: wds-Ubuntu22-cqu wdsnpshy@163.com
- * @LastEditTime: 2024-12-08 19:04:23
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2024-12-25 10:54:58
  * @FilePath: /arduino-esp32/include/ESPAsyncWebServer/html.h
  * @Description: 提供各个路由的html，简化web_server.hpp的代码
  * 微信: 15310638214 
@@ -191,7 +191,7 @@ const char* WIFI_PAGE = R"(
             </div>
             <div class="form-group">
                 <label for="password">WiFi密码:</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password">
             </div>
             
             <!-- 保存和删除按钮组 -->
