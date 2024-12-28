@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-13 22:20:59
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-28 22:47:34
+ * @LastEditTime: 2024-12-29 03:56:32
  * @FilePath: /arduino-esp32/include/PINS.h
  * @Description: 定义使用的引脚
  * 微信: 15310638214 
@@ -28,6 +28,7 @@
 
 // //定义ws2812引脚
 #define WS2812_PIN 2
+#define LED_COUNT 1 //定义灯的数量
 
 
 // MicRecorder 引脚定义
