@@ -1,85 +1,43 @@
-#include <Arduino.h>
-#include "MicRecorder/MicRecorder.hpp"
-#include "Megaphone/Megaphone.hpp"
-#include "Strip_light/Strip_light.hpp"
+/*
+ * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
+ * @Date: 2024-11-20 18:34:23
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2024-12-29 04:40:55
+ * @FilePath: /arduino-esp32/src/main.cpp
+ * @Description: 
+ * 微信: 15310638214 
+ * 邮箱：wdsnpshy@163.com 
+ * Copyright (c) 2024 by ${wds-Ubuntu22-cqu}, All Rights Reserved. 
+ */
+#include <WiFi.h>
+#include "WiFi_Network_Configuration/WiFi_Network_Configuration.hpp"    //文件名称不更改是因为改了会报错，稀奇古怪的错误
+#include "Bluetooth_Configuration_Wi_Fi/Bluetooth_Configuration_Wi_Fi.hpp"
 
-StripLight stripLight;
 
-// 定义录音时长（秒）和 PCM 文件路径
-#define RECORD_DURATION_SEC 3
-#define PCM_FILE_PATH "/record.pcm"
+WiFi_Network_Configuration webServer("AI-toys", "12345678");
+Bluetooth_Configuration_Wi_Fi bluetooth("AI-toys-ble");
 
-// 创建 MicRecorder 和 Megaphone 实例，使用默认参数
-MicRecorder mic;
-Megaphone megaphone;
 
 void setup() {
     Serial.begin(115200);
-    delay(1000); // 等待串口初始化
+    delay(1000); // 添加短暂延迟以确保系统稳定
+    
+    if(!webServer.connectWifi())
+    {   
 
-    // 初始化 SPIFFS 文件系统
-    if (!SPIFFS.begin(true)) {
-        Serial.println("Failed to mount SPIFFS");
-        while (1) { delay(1000); }
+        //开启蓝牙配网
+        Serial.println("开启蓝牙配网");
+        bluetooth.begin();
+
+        Serial.println("链接wifi失败，进入web服务器");
+        webServer.openweb(true);
     }
-    Serial.println("SPIFFS mounted successfully.");
-
-    // 初始化 MicRecorder
-    if (!mic.begin()) {
-        Serial.println("MicRecorder initialization failed!");
-        while (1) { delay(1000); }
+    else
+    {
+        Serial.println("wifi链接成功");
     }
-    Serial.println("MicRecorder initialized successfully.");
-
-    // 初始化 Megaphone
-    if (!megaphone.begin()) {
-        Serial.println("Megaphone initialization failed!");
-        while (1) { delay(1000); }
-    }
-    Serial.println("Megaphone initialized successfully.");
-
-    // 设置音量增益（可选）
-    megaphone.setVolume(10.0f);  // 1.0f 表示无增益，0.5f 表示减半音量，2.0f 表示音量加倍
-
-    // 开始录音
-    Serial.println("Starting audio recording...");
-
-    stripLight.setBrightness(100);
-    stripLight.show_flash(100, {255, 0, 0});
-    File audioFile = SPIFFS.open(PCM_FILE_PATH, FILE_WRITE);
-    if (!audioFile) {
-        Serial.println("Failed to open file for writing");
-        return;
-    }
-
-    uint32_t totalSamples = MicRecorder_DEFAULT_SAMPLE_RATE * RECORD_DURATION_SEC;
-    uint32_t samplesRecorded = 0;
-    const size_t bufferSize = 1024;
-    int16_t buffer[bufferSize];
-
-    while (samplesRecorded < totalSamples) {
-        size_t samplesToRead = min(bufferSize, (size_t)(totalSamples - samplesRecorded));
-        size_t samplesRead = mic.readPCM(buffer, samplesToRead);
-        if (samplesRead == 0) {
-            Serial.println("No samples read, continuing...");
-            continue;
-        }
-
-        audioFile.write((uint8_t*)buffer, samplesRead * sizeof(int16_t));
-        samplesRecorded += samplesRead;
-
-        Serial.printf("Recorded %u/%u samples\r", samplesRecorded, totalSamples);
-    }
-    audioFile.close();
-    Serial.println("\nRecording finished.");
-
-    // 播放录制的音频
-    Serial.println("Starting audio playback...");
-    stripLight.show_flash(100, {0, 255, 0});
-    megaphone.playFromFile(PCM_FILE_PATH);
-    Serial.println("Audio playback finished.");
 }
 
 void loop() {
-    // 无需在循环中执行任何操作
+    delay(10); // 添加小延迟以防止看门狗复位
 }

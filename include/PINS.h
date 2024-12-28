@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-13 22:20:59
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-29 03:56:32
+ * @LastEditTime: 2024-12-29 04:28:51
  * @FilePath: /arduino-esp32/include/PINS.h
  * @Description: 定义使用的引脚
  * 微信: 15310638214 
@@ -31,6 +31,7 @@
 #define LED_COUNT 1 //定义灯的数量
 
 
+/**************************************esp32 s3引脚定义*************************************************** */
 // MicRecorder 引脚定义
 #define MicRecorder_DEFAULT_BCK_PIN         45       //用于同步时钟
 #define MicRecorder_DEFAULT_WS_PIN          12      //片选引脚
@@ -44,7 +45,9 @@
 
 
 
-// // MicRecorder 引脚定义
+
+/**************************************esp32 引脚定义*************************************************** */
+// MicRecorder 引脚定义
 // #define MicRecorder_DEFAULT_BCK_PIN         4       //用于同步时钟
 // #define MicRecorder_DEFAULT_WS_PIN          15      //片选引脚
 // #define MicRecorder_DEFAULT_DATA_IN_PIN     22      //数据输入引脚
