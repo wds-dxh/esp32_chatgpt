@@ -362,6 +362,7 @@ void Megaphone::playFromFile(const char* filename) {
         size_t samples = bytesRead / sizeof(int16_t);
         // 阻塞播放 (也可改用 queuePCM 让后台播放)
         AudioProcessor::applyGain(buffer, samples, _ampGain);
+        Serial.printf("Megaphone: Playing %d samples\n", samples);
         playPCM(buffer, samples);
     }
 

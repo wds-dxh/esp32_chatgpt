@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-13 22:20:59
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-23 12:39:44
+ * @LastEditTime: 2024-12-28 22:47:34
  * @FilePath: /arduino-esp32/include/PINS.h
  * @Description: 定义使用的引脚
  * 微信: 15310638214 
@@ -27,21 +27,33 @@
 // #define UART_RX TX
 
 // //定义ws2812引脚
-// #define WS2812_PIN 2
+#define WS2812_PIN 2
 
 
 // MicRecorder 引脚定义
-#define MicRecorder_DEFAULT_BCK_PIN         4       //用于同步时钟
-#define MicRecorder_DEFAULT_WS_PIN          15      //片选引脚
-#define MicRecorder_DEFAULT_DATA_IN_PIN     22      //数据输入引脚
+#define MicRecorder_DEFAULT_BCK_PIN         45       //用于同步时钟
+#define MicRecorder_DEFAULT_WS_PIN          12      //片选引脚
+#define MicRecorder_DEFAULT_DATA_IN_PIN     9      //数据输入引脚
 
 
 // Megaphone 引脚定义
-#define Megaphone_DEFAULT_BCK_PIN              26
-#define Megaphone_DEFAULT_WS_PIN               27
-#define Megaphone_DEFAULT_DATA_OUT_PIN         25
+#define Megaphone_DEFAULT_BCK_PIN              40
+#define Megaphone_DEFAULT_WS_PIN               42
+#define Megaphone_DEFAULT_DATA_OUT_PIN         1
 
 
+
+// // MicRecorder 引脚定义
+// #define MicRecorder_DEFAULT_BCK_PIN         4       //用于同步时钟
+// #define MicRecorder_DEFAULT_WS_PIN          15      //片选引脚
+// #define MicRecorder_DEFAULT_DATA_IN_PIN     22      //数据输入引脚
+
+
+// // Megaphone 引脚定义
+// #define Megaphone_DEFAULT_BCK_PIN              26
+// #define Megaphone_DEFAULT_WS_PIN               27
+// #define Megaphone_DEFAULT_DATA_OUT_PIN         25
+ 
 #endif // PINS_H
 
 
