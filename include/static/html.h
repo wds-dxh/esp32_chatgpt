@@ -2,15 +2,15 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-12-08 17:32:50
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-25 10:54:58
+ * @LastEditTime: 2024-12-30 12:29:04
  * @FilePath: /arduino-esp32/include/ESPAsyncWebServer/html.h
  * @Description: 提供各个路由的html，简化web_server.hpp的代码
  * 微信: 15310638214 
  * 邮箱：wdsnpshy@163.com 
  * Copyright (c) 2024 by ${wds-Ubuntu22-cqu}, All Rights Reserved. 
  */
-#ifndef HTML_H
-#define HTML_H
+#pragma once
+
 #include <Arduino.h>
 
 // 提供根路由的HTML表单: 1.跳转到wifi设置页面
@@ -453,5 +453,4 @@ const char* DELETE_ALL_WIFI_SUCCESSFULLY_PAGE = R"(
 
 
 
-#endif
 

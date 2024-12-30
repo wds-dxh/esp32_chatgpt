@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-12-08 12:57:58
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-29 04:44:54
+ * @LastEditTime: 2024-12-30 12:30:05
  * @FilePath: /arduino-esp32/include/ESPAsyncWebServer/web_server.hpp
  * @Description: 
  * 微信: 15310638214 
@@ -14,8 +14,8 @@
 1. 根路由：提供一个根路由，返回一个美化后的HTML表单。显示多个功能（现在主要是wifi）
 2. wifi路由：处理wifi的连接和断开，并返回当前wifi状态
 */
-#ifndef WEB_SERVER_HPP
-#define WEB_SERVER_HPP
+#pragma once
+
 #include <ESPAsyncWebServer.h>
 #include <Preferences.h>        // 用于存储和读取ESP32的闪存(flash)
 #include <Arduino.h>            // 提供Arduino库
@@ -97,4 +97,4 @@ public:
     }
 };
 
-#endif
+

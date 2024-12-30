@@ -4,9 +4,7 @@
  * @Description: 麦克风录音模块（将声明和实现都放在同一个 .hpp 文件中）
  * 邮箱：wdsnpshy@163.com
  */
-
-#ifndef MICRECORDER_HPP
-#define MICRECORDER_HPP
+#pragma once
 
 #include <Arduino.h>
 #include <math.h>
@@ -159,5 +157,3 @@ private:
     void processAudioBuffer(int16_t* buffer, size_t sampleCount);
 };
 
-
-#endif // MICRECORDER_HPP

@@ -1,5 +1,4 @@
-#ifndef STRIP_LIGHT_HPP
-#define STRIP_LIGHT_HPP
+#pragma once
 
 #include <Arduino.h>
 #include "Adafruit_NeoPixel.h" // 包含头文件
@@ -36,4 +35,4 @@ public:
 };
 
 
-#endif // STRIP_LIGHT_HPP
+

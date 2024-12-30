@@ -1,5 +1,4 @@
-#ifndef MEGAPHONE_HPP
-#define MEGAPHONE_HPP
+#pragma once
 
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -142,4 +141,3 @@ private:
 };
 
 
-#endif // MEGAPHONE_HPP

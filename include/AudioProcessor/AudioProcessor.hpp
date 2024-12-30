@@ -1,5 +1,6 @@
-#ifndef AUDIO_PROCESSOR_HPP
-#define AUDIO_PROCESSOR_HPP
+#pragma once
+
+
 
 #include <Arduino.h>
 #include <math.h>
@@ -61,4 +62,3 @@ private:
     static float calculateEnvelope(const int16_t* samples, size_t sampleCount, int windowSize);
 };
 
-#endif // AUDIO_PROCESSOR_HPP

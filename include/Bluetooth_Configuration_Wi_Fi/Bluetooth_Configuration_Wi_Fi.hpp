@@ -1,5 +1,4 @@
-#ifndef BLUETOOTH_CONFIGURATION_WIFI_HPP
-#define BLUETOOTH_CONFIGURATION_WIFI_HPP
+#pragma once
 
 #include <Arduino.h>
 #include <BLEDevice.h>
@@ -71,5 +70,3 @@ public:
     void getCredentials(String &ssid, String &password);
 };
 
-
-#endif // BLUETOOTH_CONFIGURATION_WIFI_HPP

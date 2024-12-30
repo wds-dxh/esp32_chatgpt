@@ -2,15 +2,15 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-13 22:20:59
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-29 04:28:51
+ * @LastEditTime: 2024-12-30 12:30:33
  * @FilePath: /arduino-esp32/include/PINS.h
  * @Description: 定义使用的引脚
  * 微信: 15310638214 
  * 邮箱：wdsnpshy@163.com 
  * Copyright (c) 2024 by ${wds-Ubuntu22-cqu}, All Rights Reserved. 
  */
-#ifndef PINS_H
-#define PINS_H
+#pragma once
+
 #include<Arduino.h>
 
 
@@ -58,7 +58,7 @@
 // #define Megaphone_DEFAULT_WS_PIN               27
 // #define Megaphone_DEFAULT_DATA_OUT_PIN         25
  
-#endif // PINS_H
+
 
 
 
