@@ -118,6 +118,7 @@ private:
     WebsocketsClient _webSocketClient; ///< 实际的 WebSocket 客户端
     MessageCallback  _messageCallback  = nullptr; ///< 识别结果回调
     EventCallback    _eventCallback    = nullptr; ///< 事件通知回调
+    static String askquestion; ///< 识别结果 静态成员变量要在外面初始化
 
     bool   _connected  = false; ///< 是否已连接标记
     String _appId;              ///< 讯飞 AppId

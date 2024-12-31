@@ -46,7 +46,7 @@ void setup() {
         return;
     }
 
-    uint32_t totalSamples = MicRecorder_DEFAULT_SAMPLE_RATE * RECORD_DURATION_SEC;
+    uint32_t totalSamples = MicRecorder_DEFAULT_SAMPLE_RATE * RECORD_DURATION_SEC;  // 需要录制的总采样数
     uint32_t samplesRecorded = 0;
     const size_t bufferSize = 1024;
     int16_t buffer[bufferSize];

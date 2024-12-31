@@ -17,7 +17,7 @@
 
 
 #define MicRecorder_DEFAULT_I2S_NUM         I2S_NUM_0   // ESP32 S3 一共有两个 I2S 接口
-#define MicRecorder_DEFAULT_SAMPLE_RATE     16000       // 16kHz，一般的语音识别采样率
+#define MicRecorder_DEFAULT_SAMPLE_RATE     8000       // 16kHz，一般的语音识别采样率
 #define MicRecorder_DEFAULT_BITS_PER_SAMPLE I2S_BITS_PER_SAMPLE_16BIT // 16位，一般的语音识别位深
 #define MicRecorder_DEFAULT_CHANNEL_FORMAT  I2S_CHANNEL_FMT_ONLY_LEFT  // 只使用左声道
 #define MicRecorder_DEFAULT_COMM_FORMAT     I2S_COMM_FORMAT_STAND_I2S  // 标准 I2S 通信模式
