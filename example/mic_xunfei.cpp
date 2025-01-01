@@ -57,34 +57,33 @@ void setup()
     else
     {
         Serial.println("WiFi 链接成功");
+    }
+    // 初始化录音模块
+    if (!recorder.begin())
+    {
+        Serial.println("MicRecorder 初始化失败");
+    }
+    else
+    {
+        Serial.println("MicRecorder 初始化成功");
+    }
 
-        // 初始化录音模块
-        if (!recorder.begin())
-        {
-            Serial.println("MicRecorder 初始化失败");
-        }
-        else
-        {
-            Serial.println("MicRecorder 初始化成功");
-        }
-
-        stt.setMessageCallback(myMessageCallback);
-        stt.setEventCallback(myEventCallback);
-        String dateString = stt.fetchServerTime("https://www.baidu.com");
-        if (dateString.isEmpty())
-        {
-            Serial.println("[Warn] 获取时间失败, 可能会导致鉴权不正确");
-        }
-        String wsUrl = stt.generateWsUrl("iat-api.xfyun.cn", "/v2/iat", dateString);
-        bool ok = stt.connect(wsUrl);
-        if (!ok)
-        {
-            Serial.println("[setup] XunFeiSttService connect failed!");
-        }
-        else
-        {
-            Serial.println("XunFeiSttService connect success!");
-        }
+    stt.setMessageCallback(myMessageCallback);
+    stt.setEventCallback(myEventCallback);
+    String dateString = stt.fetchServerTime("https://www.baidu.com");
+    if (dateString.isEmpty())
+    {
+        Serial.println("[Warn] 获取时间失败, 可能会导致鉴权不正确");
+    }
+    String wsUrl = stt.generateWsUrl("iat-api.xfyun.cn", "/v2/iat", dateString);
+    bool ok = stt.connect(wsUrl);
+    if (!ok)
+    {
+        Serial.println("[setup] XunFeiSttService connect failed!");
+    }
+    else
+    {
+        Serial.println("XunFeiSttService connect success!");
     }
 }
 
@@ -105,19 +104,16 @@ void loop()
         Serial.println("No samples read, continuing...");
     }
 
+    // 开始发送音频数据到讯飞服务器
+    stt.sendAudioData((uint8_t *)buffer, samplesRead * sizeof(int16_t), false);
+    sendCount++;
+    if (sendCount > 19)
+    {
+        stt.sendAudioData((uint8_t *)buffer, samplesRead * sizeof(int16_t), true);
+        sendCount = 0;
+        count = 1;
+        time_1 = millis();
+    }
 
-        // 开始发送音频数据到讯飞服务器
-        stt.sendAudioData((uint8_t *)buffer, samplesRead * sizeof(int16_t), false);
-        sendCount++;
-        if (sendCount > 19)
-        {
-            stt.sendAudioData((uint8_t *)buffer, samplesRead * sizeof(int16_t), true);
-            sendCount = 0;
-            count = 1;
-            time_1 = millis();
-        }
-
-        Serial.println("send_count: " + String(sendCount));
-
-
+    Serial.println("send_count: " + String(sendCount));
 }
