@@ -2,14 +2,17 @@
 #include "llm/LLMWebSocketClient.hpp"
 #include "WiFi_Network_Configuration/WiFi_Network_Configuration.hpp"
 
+
 // 创建 WebSocket 客户端实例
 LLMWebSocketClient llmClient("device_002");
 WiFi_Network_Configuration webServer("AI-toys", "88888888");
 
+
+
 int time_1 = 0;
 int time_2 = 0;
 // 定义回调函数
-void onResponse(const String &response)
+void onResponse(const String &response) //回调函数
 {
     time_2 = millis();  
     Serial.print("Received response: ");
@@ -40,9 +43,6 @@ void onEvent(LLMWebsocketEvent event, const String &eventData)
 
 void setup()
 {
-    // 初始化引脚0为上拉输入
-    pinMode(0, INPUT_PULLUP); // 按键
-
     Serial.begin(115200);
 
     if (!webServer.connectWifi())
