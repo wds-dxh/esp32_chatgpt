@@ -12,9 +12,13 @@ unsigned long lastFeedTime = 0; // 记录最后一次接收数据的时间
 const unsigned long WATCHDOG_TIMEOUT = 5000; // 看门狗超时时间，单位：毫秒
 
 int start_task = 0;
+int time_1 = 0;
+int time_2 = 0;
 
 void onBinaryData(const int16_t *data, size_t len)
-{
+{   
+    time_2 = millis();
+    Serial.println("time: " + String(time_2 - time_1));
     lastFeedTime = millis(); // 更新看门狗时间
 
     if (start_task == 0)
@@ -132,6 +136,7 @@ void setup()
     }
 
     // 模拟发送问题
+    time_1 = millis();
     if (llmClient.sendRequest("你是谁？简单介绍一下！十个字以内"))
     {
         Serial.println("发送成功");
