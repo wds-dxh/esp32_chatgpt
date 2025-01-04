@@ -12,7 +12,7 @@
 
 // ------------------- 默认参数定义 -------------------
 #define Megaphone_DEFAULT_I2S_NUM         I2S_NUM_1
-#define Megaphone_DEFAULT_SAMPLE_RATE     8000
+#define Megaphone_DEFAULT_SAMPLE_RATE     16000
 #define Megaphone_DEFAULT_BITS_PER_SAMPLE I2S_BITS_PER_SAMPLE_16BIT
 #define Megaphone_DEFAULT_CHANNEL_FORMAT  I2S_CHANNEL_FMT_ONLY_LEFT
 #define Megaphone_DEFAULT_COMM_FORMAT     I2S_COMM_FORMAT_STAND_I2S
