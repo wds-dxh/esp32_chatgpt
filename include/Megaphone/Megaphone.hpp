@@ -12,16 +12,16 @@
 
 // ------------------- 默认参数定义 -------------------
 #define Megaphone_DEFAULT_I2S_NUM         I2S_NUM_1
-#define Megaphone_DEFAULT_SAMPLE_RATE     8000
+#define Megaphone_DEFAULT_SAMPLE_RATE     16000
 #define Megaphone_DEFAULT_BITS_PER_SAMPLE I2S_BITS_PER_SAMPLE_16BIT
 #define Megaphone_DEFAULT_CHANNEL_FORMAT  I2S_CHANNEL_FMT_ONLY_LEFT
 #define Megaphone_DEFAULT_COMM_FORMAT     I2S_COMM_FORMAT_STAND_I2S
-#define Megaphone_DEFAULT_DMA_BUF_COUNT   16
-#define Megaphone_DEFAULT_DMA_BUF_LEN     64
+#define Megaphone_DEFAULT_DMA_BUF_COUNT   8
+#define Megaphone_DEFAULT_DMA_BUF_LEN     1024
 
 // 用于后台播放的音频数据包
 struct AudioChunk {
-    int16_t* data;   // 动态分配的采样数据指针
+    int16_t* data;   // 动态分配的采样数据指针，因为深度是16位，所以是int16_t
     size_t   size;   // 采样点数量
     bool     isLast; // 是否是最后一个数据块，用于触发回调
 };
@@ -107,7 +107,7 @@ private:
 
     // ============ 后台队列相关 ============
     QueueHandle_t _audioQueue;       // 存储 AudioChunk 的队列
-    static const int QUEUE_LEN = 8;  // 队列最大长度(可根据需要调整)
+    static const int QUEUE_LEN = 64;  // 队列最大长度(可根据需要调整)
 
     // 后台任务
     TaskHandle_t _writerTaskHandle;

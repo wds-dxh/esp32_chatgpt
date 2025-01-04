@@ -177,7 +177,7 @@ size_t Megaphone::queuePCM(const int16_t* buffer, size_t sampleCount, bool isLas
     if (!_audioQueue || !buffer || sampleCount == 0) return 0;
 
     int16_t* dataCopy = (int16_t*)malloc(sampleCount * sizeof(int16_t));
-    if (!dataCopy) {
+    if (!dataCopy) {   
         Serial.println("Megaphone: Malloc failed in queuePCM!");
         return 0;
     }
@@ -327,7 +327,7 @@ void Megaphone::i2sWriterTask(void* parameter) {
             }
 
             // 处理(音量/效果等)
-            self->processAudioBuffer(chunk.data, chunk.size);
+            // self->processAudioBuffer(chunk.data, chunk.size);
 
             // 写I2S(阻塞)
             size_t bytesWritten = 0;

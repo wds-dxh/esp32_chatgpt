@@ -1,20 +1,25 @@
 #include <Arduino.h>
 #include "llm/LLMWebSocketClient.hpp"
 #include "WiFi_Network_Configuration/WiFi_Network_Configuration.hpp"
+#include "Megaphone/Megaphone.hpp"
+
 
 // 创建 WebSocket 客户端实例
 LLMWebSocketClient llmClient("device_002");
 WiFi_Network_Configuration webServer("AI-toys", "88888888");
+Megaphone megaphone;
 
 int time_1 = 0;
 int time_2 = 0;
 // 定义回调函数
-void onResponse(const String &response)
+void onResponse(const String &response) //回调函数
 {
-    time_2 = millis();  
-    Serial.print("Received response: ");
-    Serial.println(time_2 - time_1);
-    Serial.println(response);
+    //转换为int16_t的指针格式的数据
+    const int16_t *data = reinterpret_cast<const int16_t *>(response.c_str());
+    //获取数据长度
+    size_t len = response.length() / sizeof(int16_t);
+    //播放音频
+    megaphone.queuePCM(data, len);
 }
 
 void onEvent(LLMWebsocketEvent event, const String &eventData)
@@ -39,11 +44,17 @@ void onEvent(LLMWebsocketEvent event, const String &eventData)
 }
 
 void setup()
-{
-    // 初始化引脚0为上拉输入
-    pinMode(0, INPUT_PULLUP); // 按键
+{   Serial.begin(115200);
 
-    Serial.begin(115200);
+    // 初始化 Megaphone
+    if (!megaphone.begin()) {
+        Serial.println("Megaphone initialization failed!");
+        while (1) { delay(1000); }
+    }
+    Serial.println("Megaphone initialized successfully.");
+
+    megaphone.startWriterTask();        //启动写入任务
+    
 
     if (!webServer.connectWifi())
     {
