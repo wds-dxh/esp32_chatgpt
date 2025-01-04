@@ -361,11 +361,12 @@ void Megaphone::processAudioBuffer(int16_t *buffer, size_t sampleCount)
     }
 }
 
-int star_pal = 0;
+
 // ------------ 后台任务 ------------
 void Megaphone::i2sWriterTask(void *parameter)
 {
     Megaphone *self = static_cast<Megaphone *>(parameter);
+    int star_pal = 0;
     while (true)
     {
         AudioChunk chunk;

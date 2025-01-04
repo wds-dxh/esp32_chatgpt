@@ -8,12 +8,15 @@ LLMWebSocketClient llmClient("device_002");
 WiFi_Network_Configuration webServer("AI-toys", "88888888");
 Megaphone megaphone;
 
-int time_1 = 0;
-int time_2 = 0;
-// 修改回调函数为二进制处理
+unsigned long lastFeedTime = 0; // 记录最后一次接收数据的时间
+const unsigned long WATCHDOG_TIMEOUT = 5000; // 看门狗超时时间，单位：毫秒
+
 int start_task = 0;
+
 void onBinaryData(const int16_t *data, size_t len)
 {
+    lastFeedTime = millis(); // 更新看门狗时间
+
     if (start_task == 0)
     {
         start_task = 1;
@@ -29,7 +32,8 @@ void onBinaryData(const int16_t *data, size_t len)
         delay(1);
     }
 }
-// 创建一个任务确保queuqe有20个数据包
+
+// 创建一个任务确保queue有20个数据包
 void task(void *pvParameters)
 {
     while (1)
@@ -40,6 +44,23 @@ void task(void *pvParameters)
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
         delay(1);
+    }
+}
+
+// 看门狗任务
+void watchdogTask(void *pvParameters)
+{
+    while (1) 
+    {
+        unsigned long currentTime = millis();
+        if ((currentTime - lastFeedTime) > WATCHDOG_TIMEOUT)
+        {
+            Serial.println("Watchdog timeout! Closing WebSocket...");
+            llmClient.close(); // 关闭 WebSocket 连接
+            megaphone.stopWriterTask(); // 停止播放任务
+            vTaskDelete(NULL); // 删除看门狗任务
+        }
+        vTaskDelay(500 / portTICK_PERIOD_MS); // 每 500ms 检查一次
     }
 }
 
@@ -101,7 +122,6 @@ void setup()
     llmClient.setEventCallback(onEvent);
 
     // 连接到 WebSocket 服务
-    // if (llmClient.connect("ws://lab-cqu.dxh-wds.top:8000/ws"))
     if (llmClient.connect("ws://172.20.10.3:8000/ws"))
     {
         Serial.println("WebSocket connected");
@@ -110,7 +130,7 @@ void setup()
     {
         Serial.println("WebSocket connection failed");
     }
-    time_2 = millis();
+
     // 模拟发送问题
     if (llmClient.sendRequest("你是谁？简单介绍一下！十个字以内"))
     {
@@ -120,7 +140,9 @@ void setup()
     {
         Serial.println("发送失败");
     }
+
     llmClient.sendRequest("ok");
+    lastFeedTime = millis(); // 初始化看门狗时间
 }
 
 void loop()
@@ -131,5 +153,13 @@ void loop()
     {
         xTaskCreatePinnedToCore(task, "task", 4096, NULL, 5, NULL, 1);
         start_task = 2;
+    }
+
+    // 启动看门狗任务
+    static bool watchdogStarted = false;
+    if (!watchdogStarted)
+    {
+        xTaskCreatePinnedToCore(watchdogTask, "WatchdogTask", 2048, NULL, 5, NULL, 1);
+        watchdogStarted = true;
     }
 }
