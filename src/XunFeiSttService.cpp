@@ -112,7 +112,7 @@ bool XunFeiSttService::connect(const String &url)
 {
     if (_connected)
     {
-        close();
+        return true;
     }
     bool result = _webSocketClient.connect(url.c_str());
     if (result)
@@ -254,13 +254,13 @@ void XunFeiSttService::onMessageCallback(WebsocketsMessage message)
         // 输出完整的JSON数据
         Serial.println(message.data());
         // 关闭WebSocket客户端
-        // _webSocketClient.close();
+        s_instance->close();
     }
     else
     {
         // 输出收到的讯飞云返回消息
-        Serial.println("xunfeiyun stt return message:");
-        Serial.println(message.data());
+        // Serial.println("xunfeiyun stt return message:");
+        // Serial.println(message.data());
 
         // 获取JSON数据中的结果部分，并提取文本内容
         JsonArray ws = jsonDocument["data"]["result"]["ws"].as<JsonArray>();
@@ -285,11 +285,14 @@ void XunFeiSttService::onMessageCallback(WebsocketsMessage message)
         if (jsonDocument["data"]["status"] == 2)
         {
             // 如果状态码为2，表示消息处理完成
-            Serial.println("status == 2");
-            // _webSocketClient.close();
+            // Serial.println("status == 2");
+            // s_instance->close();
+            s_instance->close();
         }
 
         s_instance->_messageCallback(askquestion);
+        s_instance->close(); //稀奇古怪，不关闭的话可能还回来一个空的结果
+        askquestion = "";
     }
 }
 

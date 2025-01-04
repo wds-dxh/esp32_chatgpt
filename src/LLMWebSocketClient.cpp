@@ -37,6 +37,9 @@ bool LLMWebSocketClient::connect(const String& url) {
     if (!WiFi.status() == WL_CONNECTED) {
         return false;
     }
+    if (_connected) {
+        return true;
+    }
     if (_webSocketClient.connect(url)) {
         _connected = true;
 

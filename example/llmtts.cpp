@@ -11,7 +11,7 @@ Megaphone megaphone;
 unsigned long lastFeedTime = 0; // 记录最后一次接收数据的时间
 const unsigned long WATCHDOG_TIMEOUT = 5000; // 看门狗超时时间，单位：毫秒
 
-int start_task = 0;
+int start_task = 0; //确保有20个数据包
 int time_1 = 0;
 int time_2 = 0;
 

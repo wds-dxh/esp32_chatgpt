@@ -150,6 +150,12 @@ bool Megaphone::stopWriterTask()
     {
         vTaskDelete(_writerTaskHandle);
         _writerTaskHandle = nullptr;
+        // 清空队列
+        AudioChunk chunk;
+        while (xQueueReceive(_audioQueue, &chunk, 0) == pdTRUE)
+        {
+            free(chunk.data);
+        }
         Serial.println("Megaphone: i2sWriterTask stopped!");
         return true;
     }
