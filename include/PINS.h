@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-13 22:20:59
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2024-12-31 17:54:37
+ * @LastEditTime: 2025-01-04 19:22:27
  * @FilePath: /arduino-esp32/include/PINS.h
  * @Description: 定义使用的引脚
  * 微信: 15310638214 

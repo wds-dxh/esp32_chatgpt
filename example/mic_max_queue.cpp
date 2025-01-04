@@ -78,6 +78,7 @@ void setup() {
     megaphone.startWriterTask();
     while (audioFile.available()) {
         size_t bytesRead = audioFile.readBytes((char*)buffer, sizeof(buffer));
+        Serial.printf("bufferFree: %d\n", megaphone.getBufferFree());
         megaphone.queuePCM(buffer, bytesRead / sizeof(int16_t));
     }
     audioFile.close();

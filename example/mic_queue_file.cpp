@@ -27,7 +27,7 @@ void setup() {
     Serial.println("Megaphone initialized successfully.");
 
     // 设置音量增益（可选）
-    // megaphone.setVolume(2.0f);  // 1.0f 表示无增益，0.5f 表示减半音量，2.0f 表示音量加倍
+    megaphone.setVolume(0.2f);  // 1.0f 表示无增益，0.5f 表示减半音量，2.0f 表示音量加倍
 
 
     uint32_t samplesRecorded = 0;
@@ -45,6 +45,7 @@ void setup() {
     while (audioFile.available()) {
         size_t bytesRead = audioFile.readBytes((char*)buffer, sizeof(buffer));
         megaphone.queuePCM(buffer, bytesRead / sizeof(int16_t));
+        Serial.printf("bufffre:%d\n",megaphone.getBufferFree());
         while (megaphone.getBufferFree() < 1)
         {
             delay(1);   //延迟1ms

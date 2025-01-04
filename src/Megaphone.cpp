@@ -124,7 +124,7 @@ bool Megaphone::startWriterTask() {
         this,
         1,   // 优先级
         &_writerTaskHandle,
-        0    // Core ID
+        1    // Core ID
     );
     if (_writerTaskHandle) {
         Serial.println("Megaphone: i2sWriterTask started!");
@@ -321,27 +321,40 @@ void Megaphone::i2sWriterTask(void* parameter) {
         AudioChunk chunk;
         // 阻塞等待队列数据
         if (xQueueReceive(self->_audioQueue, &chunk, portMAX_DELAY) == pdTRUE) {
-            if (!chunk.data || chunk.size == 0) {
-                if (chunk.data) free(chunk.data);
-                continue;
-            }
+           {     if (!chunk.data || chunk.size == 0) {
+                    if (chunk.data) free(chunk.data);
+                    continue;
+                }
 
-            // 处理(音量/效果等)
-            // self->processAudioBuffer(chunk.data, chunk.size);
+                // 处理(音量/效果等)
+                // self->processAudioBuffer(chunk.data, chunk.size);
 
-            // 写I2S(阻塞)
-            size_t bytesWritten = 0;
-            i2s_write(self->_i2s_num, chunk.data, chunk.size*sizeof(int16_t), &bytesWritten, portMAX_DELAY);
+                // 写I2S(阻塞)
+                size_t bytesWritten = 0;
+                //应用增益
+                AudioProcessor::applyGain(chunk.data, chunk.size, self->_ampGain);
+                // i2s_write(self->_i2s_num, chunk.data, chunk.size*sizeof(int16_t), &bytesWritten, portMAX_DELAY);
 
-            // 释放堆内存
-            free(chunk.data);
+                // esp_err_t err = i2s_write(self->_i2s_num, (const char*)chunk.data, chunk.size * sizeof(int16_t), &bytesWritten, portMAX_DELAY);
+                // if (err != ESP_OK) {
+                //     Serial.println("Megaphone: I2S write error");
+                // }
+                self->playPCM(chunk.data, chunk.size);
+          
+                // while (self->getBufferFree() > 40)
+                // {
+                //     vTaskDelay(1); // 延迟1ms
+                // }
 
-            // 如果是最后一块，则触发回调(如果已设置)
-            if (chunk.isLast && self->_callback) {
-                self->_isPlaying = false;
-                
-                self->_callback(self->_callbackContext);
-            }
+                free(chunk.data);
+
+                // 如果是最后一块，则触发回调(如果已设置)
+                if (chunk.isLast && self->_callback) {
+                    self->_isPlaying = false;
+                    
+                    self->_callback(self->_callbackContext);
+                }}
+
         }
     }
 }

@@ -3,7 +3,6 @@
 #include "WiFi_Network_Configuration/WiFi_Network_Configuration.hpp"
 #include "Megaphone/Megaphone.hpp"
 
-
 // 创建 WebSocket 客户端实例
 LLMWebSocketClient llmClient("device_002");
 WiFi_Network_Configuration webServer("AI-toys", "88888888");
@@ -11,15 +10,16 @@ Megaphone megaphone;
 
 int time_1 = 0;
 int time_2 = 0;
-// 定义回调函数
-void onResponse(const String &response) //回调函数
+// 修改回调函数为二进制处理
+void onBinaryData(const int16_t *data, size_t len)
 {
-    //转换为int16_t的指针格式的数据
-    const int16_t *data = reinterpret_cast<const int16_t *>(response.c_str());
-    //获取数据长度
-    size_t len = response.length() / sizeof(int16_t);
-    //播放音频
-    megaphone.queuePCM(data, len);
+
+    Serial.println("bufferFree: " + String(megaphone.getBufferFree()));
+    megaphone.queuePCM(data, 1024);
+    megaphone.queuePCM(data+1024, 1024);
+    megaphone.queuePCM(data+2048, 1024);
+    megaphone.queuePCM(data+3072, 1024);
+
 }
 
 void onEvent(LLMWebsocketEvent event, const String &eventData)
@@ -44,19 +44,24 @@ void onEvent(LLMWebsocketEvent event, const String &eventData)
 }
 
 void setup()
-{   Serial.begin(115200);
+{
+    Serial.begin(115200);
 
     // 初始化 Megaphone
-    if (!megaphone.begin()) {
+    if (!megaphone.begin())
+    {
         Serial.println("Megaphone initialization failed!");
-        while (1) { delay(1000); }
+        while (1)
+        {
+            delay(1000);
+        }
     }
     Serial.println("Megaphone initialized successfully.");
 
-    megaphone.startWriterTask();        //启动写入任务
-    
+    megaphone.startWriterTask(); // 启动写入任务
+    megaphone.setVolume(0.1);    // 设置音量
 
-    if (!webServer.connectWifi())
+    if (!webServer.connectWifi()) 
     {
         Serial.println("链接wifi失败，进入web服务器");
         webServer.openweb(true);
@@ -71,7 +76,7 @@ void setup()
     Serial.println(WiFi.localIP());
 
     // 设置回调
-    llmClient.setResponseCallback(onResponse);
+    llmClient.setBinaryCallback(onBinaryData);
     llmClient.setEventCallback(onEvent);
 
     // 连接到 WebSocket 服务

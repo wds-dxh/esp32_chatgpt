@@ -25,6 +25,11 @@ void LLMWebSocketClient::setEventCallback(EventCallback cb) {
     _eventCallback = cb;
 }
 
+// 新增设置二进制回调方法
+void LLMWebSocketClient::setBinaryCallback(BinaryCallback cb) {
+    _binaryCallback = cb;
+}
+
 // 连接到 WebSocket 服务器
 bool LLMWebSocketClient::connect(const String& url) {
 
@@ -89,15 +94,18 @@ bool LLMWebSocketClient::sendRequest(const String& question) {
 
 // 静态消息回调函数
 void LLMWebSocketClient::onMessageCallback(WebsocketsMessage message) {
-    if (s_instance && s_instance->_responseCallback) {
-        s_instance->_responseCallback(message.data());
+    // if (s_instance && s_instance->_responseCallback) {
+    //     s_instance->_responseCallback(message.data());
+    // }
+    if (s_instance && s_instance->_binaryCallback) {
+        const int16_t* data = (const int16_t*)message.c_str();
+        size_t len = message.length();
+        s_instance->_binaryCallback(data, len);
     }
 
     // 更新最后的响应
-    _lastResponse = message.data();
+    // _lastResponse = message.data();
 }
-
-
 
 // 静态事件回调函数
 void LLMWebSocketClient::onEventsCallback(WebsocketsEvent event, String data) {
