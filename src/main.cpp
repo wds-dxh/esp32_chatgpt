@@ -18,8 +18,9 @@ Megaphone megaphone;
 LLMWebSocketClient llmClient("device_002");
 
 unsigned long lastFeedTime = 0;              // 记录最后一次接收数据的时间,座位看门狗，停止播放任务
-const unsigned long WATCHDOG_TIMEOUT = 5000; // 看门狗超时时间，单位：毫秒
+// const unsigned long WATCHDOG_TIMEOUT = 5000; // 看门狗超时时间，单位：毫秒
 int start_task = 0;                          // 确保有20个数据包
+int send_exit = 0;                           // 发送exit
 
 
 /*******************llmtts************************** */
@@ -37,7 +38,7 @@ void onBinaryData(const int16_t *data, size_t len)
     megaphone.queuePCM(data + 2048, 1024);
     megaphone.queuePCM(data + 3072, 1024);
 
-    while (megaphone.getBufferFree() < 40)
+    while (megaphone.getBufferFree() < 30)
     {
         vTaskDelay(1);
     }
@@ -47,32 +48,39 @@ void onBinaryData(const int16_t *data, size_t len)
 void task(void *pvParameters)
 {
     while (1)
-    {
-        if (megaphone.getBufferFree() > 40)
+    {   size_t bufferFree_task = megaphone.getBufferFree();
+        // Serial.println("bufferFree_task: " + String(bufferFree_task));
+        if (bufferFree_task > 40)
         {
             llmClient.sendRequest("ok");
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
         vTaskDelay(1);
+        // if (send_exit == 1)
+        // {
+        //     llmClient.sendRequest("exit");
+        //     send_exit = 0;
+        // }
     }
 }
 
 // 看门狗任务
-void watchdogTask(void *pvParameters)
-{
-    while (1)
-    {
-        unsigned long currentTime = millis();
-        if ((currentTime - lastFeedTime) > WATCHDOG_TIMEOUT)
-        {
-            Serial.println("Watchdog timeout! Closing WebSocket...");
-            // llmClient.close();          // 关闭 WebSocket 连接
-            megaphone.stopWriterTask(); // 停止播放任务
-            vTaskDelete(NULL);          // 删除看门狗任务
-        }
-        vTaskDelay(500 / portTICK_PERIOD_MS); // 每 500ms 检查一次
-    }
-}
+// void watchdogTask(void *pvParameters)
+// {
+//     while (1)
+//     {
+//         unsigned long currentTime = millis();
+//         if ((currentTime - lastFeedTime) > WATCHDOG_TIMEOUT)
+//         {
+//             Serial.println("Watchdog timeout! Closing WebSocket...");
+//             // llmClient.close();          // 关闭 WebSocket 连接
+//             megaphone.stopWriterTask(); // 停止播放任务
+//             vTaskDelete(NULL);          // 删除看门狗任务
+//         }
+//         vTaskDelay(500 / portTICK_PERIOD_MS); // 每 500ms 检查一次
+
+//     }
+// }
 
 void onEvent(LLMWebsocketEvent event, const String &eventData)
 {
@@ -99,7 +107,15 @@ void onEvent(LLMWebsocketEvent event, const String &eventData)
 /*******************stt************************** */
 void myMessageCallback(const String &recognizedText)
 {
-    llmClient.connect("ws://172.20.10.3:8000/ws");
+    // llmClient.connect("ws://172.20.10.3:8000/ws");
+    if (llmClient.connect("ws://172.20.10.3:8000/ws"))
+    {
+        Serial.println("WebSocket connected");
+    }
+    else
+    {
+        Serial.println("WebSocket connection failed");
+    }
     Serial.println("[STT] Recognized: " + recognizedText);
     megaphone.startWriterTask();
     // 将识别结果发送给大模型服务
@@ -111,6 +127,8 @@ void myMessageCallback(const String &recognizedText)
     {
         Serial.println("[LLM] Failed to send request");
     }
+    llmClient.sendRequest("ok");
+    llmClient.sendRequest("ok");
     llmClient.sendRequest("ok");
 }
 void myEventCallback(SttWebsocketEvent event, const String &eventData)
@@ -172,7 +190,7 @@ void setup()
     }
     Serial.println("Megaphone initialized successfully.");
     megaphone.startWriterTask(); // 启动写入任务
-    megaphone.setVolume(0.1);    // 设置音量
+    megaphone.setVolume(0.2);    // 设置音量
 
     // 4. 初始化llmtts（）设置回调。连接到 WebSocket 服务
     llmClient.setBinaryCallback(onBinaryData);
@@ -229,13 +247,13 @@ void loop()
         xTaskCreatePinnedToCore(task, "task", 4096, NULL, 5, NULL, 1);
         start_task = 2;
     }
-    // 启动看门狗任务
-    static bool watchdogStarted = false;
-    if (!watchdogStarted)
-    {
-        xTaskCreatePinnedToCore(watchdogTask, "WatchdogTask", 2048, NULL, 5, NULL, 1);
-        watchdogStarted = true;
-    }
+    // // 启动看门狗任务
+    // static bool watchdogStarted = false;
+    // if (!watchdogStarted)
+    // {
+    //     xTaskCreatePinnedToCore(watchdogTask, "WatchdogTask", 2048, NULL, 5, NULL, 1);
+    //     watchdogStarted = true;
+    // }
 
     /******************stt***************** */
     stt.poll();
@@ -255,6 +273,7 @@ void loop()
         megaphone.stopWriterTask();
         megaphone.clearBuffer();
         Serial.println("开始录音");
+        // send_exit = 1;   //延迟太高了会导致清空已有的数据包
         llmClient.sendRequest("exit");
 
         bool ok = stt.connect(wsUrl);
@@ -283,6 +302,7 @@ void loop()
             {
                 stt.sendAudioData((uint8_t *)buffer, samplesRead * sizeof(int16_t), true);
                 havepeople = 6;
+                megaphone.startWriterTask();
                 break;
             }
         }
