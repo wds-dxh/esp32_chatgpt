@@ -1,7 +1,7 @@
 #include "Megaphone/Megaphone.hpp"
 
 // ====================== 实现部分 ======================
-
+int _star_pal = 0; // 用于确保队列中有相应的数据包的时候才开始播放！
 // ------------ 构造 & 析构 ------------
 Megaphone::Megaphone(uint32_t sampleRate,
                      i2s_bits_per_sample_t bitsPerSample,
@@ -126,6 +126,11 @@ bool Megaphone::startWriterTask()
         Serial.println("Megaphone: No queue created, call begin() first!");
         return false;
     }
+    if (_writerTaskHandle)
+    {
+        Serial.println("Megaphone: i2sWriterTask started!");
+        return true;
+    }
     xTaskCreatePinnedToCore(
         i2sWriterTask,
         "i2sWriterTask",
@@ -135,11 +140,7 @@ bool Megaphone::startWriterTask()
         &_writerTaskHandle,
         1 // Core ID
     );
-    if (_writerTaskHandle)
-    {
-        Serial.println("Megaphone: i2sWriterTask started!");
-        return true;
-    }
+
     Serial.println("Megaphone: Failed to create i2sWriterTask!");
     return false;
 }
@@ -150,12 +151,6 @@ bool Megaphone::stopWriterTask()
     {
         vTaskDelete(_writerTaskHandle);
         _writerTaskHandle = nullptr;
-        // 清空队列
-        AudioChunk chunk;
-        while (xQueueReceive(_audioQueue, &chunk, 0) == pdTRUE)
-        {
-            free(chunk.data);
-        }
         Serial.println("Megaphone: i2sWriterTask stopped!");
         return true;
     }
@@ -321,6 +316,8 @@ void Megaphone::enableCompressor(bool enable, float threshold, float ratio, floa
 // ------------ 清空DMA缓冲 ------------
 void Megaphone::clearBuffer()
 {
+    _star_pal = 0; // 用于确保队列中有相应的数据包的时候才开始播放！
+
     i2s_zero_dma_buffer(_i2s_num);
     Serial.println("Megaphone: DMA buffer cleared.");
 }
@@ -367,22 +364,30 @@ void Megaphone::processAudioBuffer(int16_t *buffer, size_t sampleCount)
     }
 }
 
-
 // ------------ 后台任务 ------------
 void Megaphone::i2sWriterTask(void *parameter)
 {
-    Megaphone *self = static_cast<Megaphone *>(parameter);
-    int star_pal = 0;
+    _star_pal = 0; // 用于确保队列中有相应的数据包的时候才开始播放！
+
+    Megaphone *self = static_cast<Megaphone *>(parameter);  // 获取对象指针 
+    // 清空队列
+    AudioChunk chunk;
+    while (xQueueReceive(self->_audioQueue, &chunk, 0) == pdTRUE)
+    {
+        free(chunk.data);
+        
+    }
+
     while (true)
     {
         AudioChunk chunk;
-        // 当队列中有十个数据是，才开始播放
+        // 当队列中有十个数据是，才开始播放 
 
-        if (self->getBufferFree() < 41)
+        if (self->getBufferFree() < 45)
         {
-            star_pal = 1;
+            _star_pal = 1;
         }
-        if (star_pal == 1)
+        if (_star_pal == 1)
         {
 
             if (xQueueReceive(self->_audioQueue, &chunk, portMAX_DELAY) == pdTRUE)

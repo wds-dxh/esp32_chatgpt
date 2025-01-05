@@ -127,6 +127,7 @@ private:
     float  _compressorAttack;
     float  _compressorRelease;
 
+
     bool initI2S();
 
     /**
