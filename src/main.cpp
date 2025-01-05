@@ -39,11 +39,15 @@ void onBinaryData(const int16_t *data, size_t len)
     megaphone.queuePCM(data + 2048, 1024);
     megaphone.queuePCM(data + 3072, 1024);
 
-    while (megaphone.getBufferFree() < 30)
+    if (megaphone.getBufferFree() < 30)
     {
-        vTaskDelay(1);
+        vTaskDelay(10);
     }
-    llmClient.sendRequest("ok"); // 这里一定不能删除，否则会导致数据包不足，后续数据包无法补充就会卡顿
+    else
+    {
+        llmClient.sendRequest("ok");
+    }
+    // llmClient.sendRequest("ok"); // 这里一定不能删除，否则会导致数据包不足，后续数据包无法补充就会卡顿
 }
 
 // 创建一个任务确保queue有20个数据包
@@ -322,7 +326,7 @@ void loop()
         stripLight.show_flash(100, {255, 0, 0});
         vTaskDelay(10 / portTICK_PERIOD_MS);
 
-        megaphone.stopWriterTask(); // 多轮对话打断的时候，不正常
+        // megaphone.stopWriterTask(); /// 多轮对话打断的时候，不正常
         vTaskDelay(10 / portTICK_PERIOD_MS);
         megaphone.clearBuffer();
         vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -358,7 +362,6 @@ void loop()
             {
                 stt.sendAudioData((uint8_t *)buffer, samplesRead * sizeof(int16_t), true);
                 havepeople = 6;
-                megaphone.stopWriterTask();
                 // 关闭录音的时候，显示绿色
                 stripLight.setBrightness(20);
                 stripLight.show_flash(100, {0, 255, 0});

@@ -116,6 +116,7 @@ bool Megaphone::initI2S()
 // ------------ 后台任务的启动和停止 ------------
 bool Megaphone::startWriterTask()
 {
+    _star_pal = 0; // 用于确保队列中有相应的数据包的时候才开始播放！
     if (_writerTaskHandle)
     {
         Serial.println("Megaphone: i2sWriterTask already running!");
