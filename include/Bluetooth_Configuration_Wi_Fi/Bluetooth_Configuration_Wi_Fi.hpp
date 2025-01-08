@@ -2,24 +2,37 @@
 
 #include <Arduino.h>
 #include <BLEDevice.h>
-#include <BLEServer.h>
+#include <functional>
+#include "../interface/message_protocol.hpp"
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <vector>
 
+// 前向声明
+namespace APP {
+    class WifiPair;
+}
+
 class Bluetooth_Configuration_Wi_Fi {
+    friend class APP::WifiPair;  // 现在可以正确识别友元类
+
+public:
+    using DataCallback = std::function<void(const std::string&)>;
+
 private:
     BLEServer *pServer;                // BLE服务器指针
     BLEService *pService;              // BLE服务指针
     BLECharacteristic *pCharacteristic;// BLE特征值指针
 
     // 设备名称
-    String deviceName = "ESP32-BLE-Config";
+    String deviceName;
 
     // BLE服务和特征值的UUID
     const char *SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
     const char *CHAR_UUID = "12345678-1234-1234-1234-1234567890cd";
+
+    DataCallback dataCallback;
 
     // 处理BLE特征值写入的回调类
     class CharacteristicCallbacks : public BLECharacteristicCallbacks {
@@ -36,12 +49,13 @@ private:
 
     // 添加缓存
     struct {
-        std::vector<std::pair<String, String>> wifiCredentials;
+        std::vector<std::pair<String, String>> wifiCredentials; // WiFi凭证
         int numWifi = 0;
         bool isDirty = true;
     } cache;
 
-    // 新增方法：从flash加载WiFi信息到缓存
+
+    // 从flash加载WiFi信息到缓存，减少flash读取次数
     void loadWifiFromFlash() {
         if (!cache.isDirty) return;
         
@@ -59,14 +73,12 @@ private:
         cache.isDirty = false;
     }
 
-public:
-    // 构造函数
-    Bluetooth_Configuration_Wi_Fi(String deviceName);
-    
-    // 初始化BLE服务
+protected:
     void begin();
     
-    // 获取存储的WiFi凭证
-    void getCredentials(String &ssid, String &password);
+public:
+    explicit Bluetooth_Configuration_Wi_Fi(const String& deviceName);
+    void setDataCallback(DataCallback callback);
+    void sendNotification(const MessageProtocol::ResponseMessage& message);
 };
 

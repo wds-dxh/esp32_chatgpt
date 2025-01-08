@@ -58,6 +58,7 @@
         "arduino.h": "c",
         "audioprocessor.hpp": "c",
         "i2s.h": "c",
-        "freertos.h": "c"
+        "freertos.h": "c",
+        "iomanip": "cpp"
     }
 }
