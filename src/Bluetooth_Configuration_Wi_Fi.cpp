@@ -17,7 +17,7 @@ void Bluetooth_Configuration_Wi_Fi::CharacteristicCallbacks::onWrite(BLECharacte
 
 // 处理接收数据的方法实现
 void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) {
-    JsonDocument doc;
+    StaticJsonDocument<256> doc;
     DeserializationError error = deserializeJson(doc, data);
 
     if (error) {
@@ -67,7 +67,7 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
             Serial.printf("收到配网消息  WiFi凭证已保存: SSID=%s, 密码=%s\n", ssid, password);
             Serial.printf("当前已保存 %d 个WiFi配置\n", cache.numWifi);
         } else {
-            Serial.printf("WiFi凭证已存在: SSID=%s\n", ssid);
+            Serial.printf("WiFi凭证已存在");
         }
 
         // 尝试连接WiFi
@@ -82,7 +82,7 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
             attempts++;
             if (attempts == 3) {
                 attempts = 0;
-                Serial.println("WiFi连接超时，正在重试...");
+                Serial.println("WiFi连接超时..........");
                 break;
             }
         }
@@ -105,8 +105,8 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
             // 设置响应状态为失败并添加错误信息
             response.status = MessageProtocol::Status::NOT_OK;
             response.errorMessage = "WiFi连接失败，请检查凭证是否正确";
-            //重新设置为sta模式
-            WiFi.mode(WIFI_STA);
+            //重新设置为ap模式
+            WiFi.mode(WIFI_AP);
         }
 
         // 序列化响应消息并发送
@@ -118,6 +118,20 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
     }
 }
 
+// 服务器回调类构造函数实现
+Bluetooth_Configuration_Wi_Fi::ServerCallbacks::ServerCallbacks(Bluetooth_Configuration_Wi_Fi *p) 
+    : parent(p) {}
+
+// 服务器回调类实现
+void Bluetooth_Configuration_Wi_Fi::ServerCallbacks::onConnect(BLEServer* pServer) {
+    Serial.println("蓝牙设备已连接");
+}
+
+void Bluetooth_Configuration_Wi_Fi::ServerCallbacks::onDisconnect(BLEServer* pServer) {
+    Serial.println("蓝牙设备已断开连接，重新启动广播");
+    parent->startAdvertising();
+}
+
 // begin方法实现
 void Bluetooth_Configuration_Wi_Fi::begin() {
     // 初始化BLE设备
@@ -125,6 +139,7 @@ void Bluetooth_Configuration_Wi_Fi::begin() {
 
     // 创建BLE服务器
     pServer = BLEDevice::createServer();
+    pServer->setCallbacks(new ServerCallbacks(this));
 
     // 创建BLE服务
     pService = pServer->createService(SERVICE_UUID);
@@ -142,11 +157,16 @@ void Bluetooth_Configuration_Wi_Fi::begin() {
     pService->start();
 
     // 开始广播
+    startAdvertising();
+
+    Serial.println("BLE配网服务已启动");
+}
+
+void Bluetooth_Configuration_Wi_Fi::startAdvertising() {
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
     pAdvertising->start();
-
-    Serial.println("BLE配网服务已启动");
+    Serial.println("BLE广播已启动");
 }
 
 // 获取WiFi凭证

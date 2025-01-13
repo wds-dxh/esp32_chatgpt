@@ -31,6 +31,17 @@ private:
         void onWrite(BLECharacteristic *pCharacteristic) override;
     };
 
+    // 处理BLE服务器连接断开的回调类
+    class ServerCallbacks : public BLEServerCallbacks {
+    private:
+        Bluetooth_Configuration_Wi_Fi *parent;
+
+    public:
+        explicit ServerCallbacks(Bluetooth_Configuration_Wi_Fi *p);
+        void onConnect(BLEServer* pServer) override;
+        void onDisconnect(BLEServer* pServer) override;
+    };
+
     // 处理接收到的数据
     void handleReceivedData(const std::string &data);
 
@@ -68,4 +79,7 @@ public:
     
     // 获取存储的WiFi凭证
     void getCredentials(String &ssid, String &password);
+
+    // 启动BLE广播
+    void startAdvertising();
 };
