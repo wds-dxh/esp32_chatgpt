@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-20 18:34:23
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-01-09 02:44:50
+ * @LastEditTime: 2025-01-13 16:38:30
  * @FilePath: /arduino-esp32/src/main.cpp
  * @Description: 
  * 微信: 15310638214 
@@ -13,7 +13,7 @@
 #include "app/Wifi_pair.hpp"
 
 
-APP::WifiPair wifiPair("device-name");
+APP::WifiPair wifiPair("ai-toys");
 void setup() {
     
     wifiPair.begin();        // 显式初始化
