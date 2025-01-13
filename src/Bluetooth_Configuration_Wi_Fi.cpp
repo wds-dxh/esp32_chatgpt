@@ -40,23 +40,35 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
 
     if (ssid && password) {
         loadWifiFromFlash();  // 确保缓存是最新的
-        
-        Preferences preferences;
-        preferences.begin("wifi", false);
-        
-        // 更新缓存
-        cache.wifiCredentials.push_back({String(ssid), String(password)});
-        cache.numWifi++;
-        
-        // 一次性写入flash
-        preferences.putString(("ssid" + String(cache.numWifi - 1)).c_str(), ssid);
-        preferences.putString(("password" + String(cache.numWifi - 1)).c_str(), password);
-        preferences.putInt("numWifi", cache.numWifi);
-        preferences.end();
 
+        // 检查是否已经存在相同的 WiFi 名称
+        bool wifiExists = false;
+        for (const auto& wifi : cache.wifiCredentials) {
+            if (wifi.first == ssid) {
+                wifiExists = true;
+                break;
+            }
+        }
 
-        Serial.printf("收到配网消息  WiFi凭证已保存: SSID=%s, 密码=%s\n", ssid, password);
-        Serial.printf("当前已保存 %d 个WiFi配置\n", cache.numWifi);
+        if (!wifiExists) {
+            Preferences preferences;
+            preferences.begin("wifi", false);
+            
+            // 更新缓存
+            cache.wifiCredentials.push_back({String(ssid), String(password)});
+            cache.numWifi++;
+            
+            // 一次性写入flash
+            preferences.putString(("ssid" + String(cache.numWifi - 1)).c_str(), ssid);
+            preferences.putString(("password" + String(cache.numWifi - 1)).c_str(), password);
+            preferences.putInt("numWifi", cache.numWifi);
+            preferences.end();
+
+            Serial.printf("收到配网消息  WiFi凭证已保存: SSID=%s, 密码=%s\n", ssid, password);
+            Serial.printf("当前已保存 %d 个WiFi配置\n", cache.numWifi);
+        } else {
+            Serial.printf("WiFi凭证已存在: SSID=%s\n", ssid);
+        }
 
         // 尝试连接WiFi
         Serial.println("正在尝试连接WiFi...");
@@ -93,6 +105,8 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
             // 设置响应状态为失败并添加错误信息
             response.status = MessageProtocol::Status::NOT_OK;
             response.errorMessage = "WiFi连接失败，请检查凭证是否正确";
+            //重新设置为sta模式
+            WiFi.mode(WIFI_STA);
         }
 
         // 序列化响应消息并发送
