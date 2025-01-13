@@ -2,12 +2,12 @@
 
 /*--------------实现部分！ -------------------------*/
 
-XunFeiSttService *XunFeiSttService::s_instance = nullptr; // 静态成员初始化
+XunFeiSttService* XunFeiSttService::s_instance = nullptr; // 静态成员初始化
 
-XunFeiSttService::XunFeiSttService(const String &appId,
-                                   const String &apiSecret,
-                                   const String &apiKey,
-                                   const String &language)
+XunFeiSttService::XunFeiSttService(const String& appId,
+    const String& apiSecret,
+    const String& apiKey,
+    const String& language)
     : _appId(appId), _apiSecret(apiSecret), _apiKey(apiKey), _language(language)
 {
     s_instance = this;
@@ -24,17 +24,17 @@ XunFeiSttService::~XunFeiSttService()
 
 // ---------------------- 公共函数实现 ----------------------
 
-void XunFeiSttService::setLanguage(const String &language)
+void XunFeiSttService::setLanguage(const String& language)
 {
     _language = language;
 }
 
-String XunFeiSttService::fetchServerTime(const String &timeServerUrl /*= "https://www.baidu.com"*/)
+String XunFeiSttService::fetchServerTime(const String& timeServerUrl /*= "https://www.baidu.com"*/)
 {
     HTTPClient http;
     http.begin(timeServerUrl);
 
-    const char *headerKeys[] = {"Date"};                                         // 定义需要收集的HTTP头字段
+    const char* headerKeys[] = { "Date" };                                         // 定义需要收集的HTTP头字段
     http.collectHeaders(headerKeys, sizeof(headerKeys) / sizeof(headerKeys[0])); // 设置要收集的HTTP头字段
 
     String dateString;
@@ -54,7 +54,7 @@ String XunFeiSttService::fetchServerTime(const String &timeServerUrl /*= "https:
     return dateString; // 如果为空，后续 generateWsUrl() 需注意处理
 }
 
-String XunFeiSttService::generateWsUrl(const String &host, const String &path, String date)
+String XunFeiSttService::generateWsUrl(const String& host, const String& path, String date)
 {
     // String Spark_url = "ws://" + host + path;
     String Spark_url = "ws://iat-api.xfyun.cn/v2/iat";
@@ -76,9 +76,9 @@ String XunFeiSttService::generateWsUrl(const String &host, const String &path, S
     mbedtls_md_init(&ctx);
     mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(md_type), 1);
     // 设置HMAC密钥
-    mbedtls_md_hmac_starts(&ctx, (const unsigned char *)_apiSecret.c_str(), keyLength);
+    mbedtls_md_hmac_starts(&ctx, (const unsigned char*)_apiSecret.c_str(), keyLength);
     // 更新HMAC上下文
-    mbedtls_md_hmac_update(&ctx, (const unsigned char *)signature_origin.c_str(), messageLength);
+    mbedtls_md_hmac_update(&ctx, (const unsigned char*)signature_origin.c_str(), messageLength);
     // 完成HMAC计算
     mbedtls_md_hmac_finish(&ctx, hmac);
     // 释放HMAC上下文
@@ -108,7 +108,7 @@ String XunFeiSttService::generateWsUrl(const String &host, const String &path, S
     return url;
 }
 
-bool XunFeiSttService::connect(const String &url)
+bool XunFeiSttService::connect(const String& url)
 {
     if (_connected)
     {
@@ -148,7 +148,7 @@ void XunFeiSttService::poll()
 
 String XunFeiSttService::askquestion = "";  // 静态成员变量要在外面初始化，初始化为空字符串
 
-void XunFeiSttService::sendAudioData(const uint8_t *data, size_t length, bool isEndFrame)
+void XunFeiSttService::sendAudioData(const uint8_t* data, size_t length, bool isEndFrame)
 {
     if (!_connected)
     {
@@ -249,7 +249,9 @@ void XunFeiSttService::onMessageCallback(WebsocketsMessage message)
         return;
     }
     // 如果解析没有错误，从JSON数据中获取返回码，如果返回码不为0，表示出错
-    if (jsonDocument["code"] != 0)
+    // if (jsonDocument["code"] != 0)
+    int code = jsonDocument["code"];
+    if (code != 0)
     {
         // 输出完整的JSON数据
         Serial.println(message.data());
@@ -265,7 +267,9 @@ void XunFeiSttService::onMessageCallback(WebsocketsMessage message)
         // 获取JSON数据中的结果部分，并提取文本内容
         JsonArray ws = jsonDocument["data"]["result"]["ws"].as<JsonArray>();
 
-        if (jsonDocument["data"]["status"] != 2) // 处理流式返回的内容，讯飞stt最后一次会返回一个标点符号，需要和前一次返回结果拼接起来
+        // if (jsonDocument["data"]["status"] != 2) // 处理流式返回的内容，讯飞stt最后一次会返回一个标点符号，需要和前一次返回结果拼接起来
+        int status = jsonDocument["data"]["status"];        //ArduinoJson v7 版本中的 MemberProxy 不能直接用于比较操作。需要先将值保存到变量中再比较:
+        if (status != 2)
         {
             askquestion = "";
         }

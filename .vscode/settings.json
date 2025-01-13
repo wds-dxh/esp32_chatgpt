@@ -59,6 +59,8 @@
         "audioprocessor.hpp": "c",
         "i2s.h": "c",
         "freertos.h": "c",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "unordered_set": "cpp",
+        "iostream": "cpp"
     }
 }

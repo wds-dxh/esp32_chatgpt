@@ -5,49 +5,50 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include "../Bluetooth_Configuration_Wi_Fi/Bluetooth_Configuration_Wi_Fi.hpp"
-#include "../interface/message_protocol.hpp"
+#include "../interface/message_protocol.hpp"  // 添加消息协议头文件
 
 namespace APP {
 
+/**
+ * @brief WiFi配对管理类
+ * 负责处理WiFi配网和凭据管理
+ */
 class WifiPair {
 private:
+    // 使用组合模式集成蓝牙配置功能
     Bluetooth_Configuration_Wi_Fi bleConfig;
     
+    // 使用匿名结构体封装缓存数据
     struct {
-        std::vector<std::pair<String, String>> wifiCredentials;
-        int numWifi = 0;
-        bool isDirty = true;
+        std::vector<std::pair<String, String>> wifiCredentials;  // WiFi凭据列表
+        int numWifi = 0;     // WiFi配置数量
+        bool isDirty = true; // 缓存状态标志
     } cache;
 
-    void loadWifiFromFlash();
-    void handleWifiConfiguration(const std::string& jsonData);
-    bool isInitialized = false;
+    void loadWifiFromFlash();  // 从Flash加载WiFi配置
+    void handleWifiConfiguration(const std::string& jsonData);  // 处理配网请求
 
 public:
-    // 构造函数只初始化必要的成员
-    explicit WifiPair(const String& deviceName = "ai-toys") 
-        : bleConfig(deviceName) {}
+    /**
+     * @brief 构造函数
+     * 显式实现构造函数而不是使用default,避免编译错误
+     */
+    WifiPair() : bleConfig("ai-toys") {}  // 明确调用带参构造函数
     
-    // 添加 begin 方法进行实际初始化
+    /**
+     * @brief 启动配网服务
+     * 初始化蓝牙服务并加载已保存的WiFi配置
+     */
     void begin() {
-        if (isInitialized) return;
-        
-        // 设置回调函数
+        // 使用Lambda表达式设置回调
         bleConfig.setDataCallback([this](const std::string& data) {
             this->handleWifiConfiguration(data);
         });
-        
-        // 初始化蓝牙
         bleConfig.begin();
-        
-        // 加载WiFi配置
         loadWifiFromFlash();
-        
-        isInitialized = true;
     }
 };
 
-// 内联实现部分
 inline void WifiPair::loadWifiFromFlash() {
     if (!cache.isDirty) return;
     
@@ -70,9 +71,10 @@ inline void WifiPair::handleWifiConfiguration(const std::string& jsonData) {
     DeserializationError error = deserializeJson(doc, jsonData);
 
     if (error) {
-        MessageProtocol::ResponseMessage response("wifi_config", 
-            MessageProtocol::Status::NOT_OK, "Invalid JSON data");
-        bleConfig.sendNotification(response);
+        MessageProtocol::MessageData msg("wifi_config", 
+            MessageProtocol::Status::NOT_OK, 
+            "Invalid JSON data");
+        bleConfig.sendNotification(MessageProtocol::MessageHandler::serialize(msg));
         return;
     }
 
@@ -80,13 +82,13 @@ inline void WifiPair::handleWifiConfiguration(const std::string& jsonData) {
     const char* password = doc["password"];
 
     if (!ssid || !password) {
-        MessageProtocol::ResponseMessage response("wifi_config", 
-            MessageProtocol::Status::NOT_OK, "Missing SSID or password");
-        bleConfig.sendNotification(response);
+        MessageProtocol::MessageData msg("wifi_config", 
+            MessageProtocol::Status::NOT_OK, 
+            "Missing SSID or password");
+        bleConfig.sendNotification(MessageProtocol::MessageHandler::serialize(msg));
         return;
     }
 
-    // 尝试连接WiFi
     WiFi.begin(ssid, password);
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 10) {
@@ -95,7 +97,6 @@ inline void WifiPair::handleWifiConfiguration(const std::string& jsonData) {
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-        // 保存WiFi凭证
         Preferences preferences;
         preferences.begin("wifi", false);
         
@@ -107,14 +108,15 @@ inline void WifiPair::handleWifiConfiguration(const std::string& jsonData) {
         preferences.putInt("numWifi", cache.numWifi);
         preferences.end();
 
-        // 发送成功响应
-        MessageProtocol::ResponseMessage response("wifi_config", 
-            MessageProtocol::Status::OK, "WiFi connected successfully");
-        bleConfig.sendNotification(response);
+        MessageProtocol::MessageData msg("wifi_config", 
+            MessageProtocol::Status::OK, 
+            "WiFi connected successfully");
+        bleConfig.sendNotification(MessageProtocol::MessageHandler::serialize(msg));
     } else {
-        MessageProtocol::ResponseMessage response("wifi_config", 
-            MessageProtocol::Status::NOT_OK, "Failed to connect to WiFi");
-        bleConfig.sendNotification(response);
+        MessageProtocol::MessageData msg("wifi_config", 
+            MessageProtocol::Status::NOT_OK, 
+            "Failed to connect to WiFi");
+        bleConfig.sendNotification(MessageProtocol::MessageHandler::serialize(msg));
     }
 }
 

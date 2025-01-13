@@ -14,10 +14,16 @@ namespace APP {
     class WifiPair;
 }
 
+/**
+ * @brief 蓝牙配网服务类
+ * 提供BLE服务器功能，用于接收WiFi配置信息
+ */
 class Bluetooth_Configuration_Wi_Fi {
-    friend class APP::WifiPair;  // 现在可以正确识别友元类
+    // 声明友元类，允许WifiPair访问protected成员
+    friend class APP::WifiPair;
 
 public:
+    // 使用using声明简化回调函数类型
     using DataCallback = std::function<void(const std::string&)>;
 
 private:
@@ -34,7 +40,10 @@ private:
 
     DataCallback dataCallback;
 
-    // 处理BLE特征值写入的回调类
+    /**
+     * @brief BLE特征值回调处理类
+     * 处理BLE数据写入事件
+     */
     class CharacteristicCallbacks : public BLECharacteristicCallbacks {
     private:
         Bluetooth_Configuration_Wi_Fi *parent;
@@ -44,41 +53,19 @@ private:
         void onWrite(BLECharacteristic *pCharacteristic) override;
     };
 
-    // 处理接收到的数据
-    void handleReceivedData(const std::string &data);
-
-    // 添加缓存
-    struct {
-        std::vector<std::pair<String, String>> wifiCredentials; // WiFi凭证
-        int numWifi = 0;
-        bool isDirty = true;
-    } cache;
-
-
-    // 从flash加载WiFi信息到缓存，减少flash读取次数
-    void loadWifiFromFlash() {
-        if (!cache.isDirty) return;
-        
-        Preferences preferences;
-        preferences.begin("wifi", true);
-        cache.numWifi = preferences.getInt("numWifi", 0);
-        cache.wifiCredentials.clear();
-        
-        for(int i = 0; i < cache.numWifi; i++) {
-            String ssid = preferences.getString(("ssid" + String(i)).c_str(), "");
-            String password = preferences.getString(("password" + String(i)).c_str(), "");
-            cache.wifiCredentials.push_back({ssid, password});
-        }
-        preferences.end();
-        cache.isDirty = false;
-    }
-
 protected:
+    // 保护级别的begin方法，只允许友元类调用
     void begin();
-    
+
 public:
-    explicit Bluetooth_Configuration_Wi_Fi(const String& deviceName);
-    void setDataCallback(DataCallback callback);
-    void sendNotification(const MessageProtocol::ResponseMessage& message);
+    /**
+     * @brief 构造函数
+     * @param deviceName 蓝牙设备名称,默认为"ai-toys"
+     */
+    explicit Bluetooth_Configuration_Wi_Fi(const String& deviceName = "ai-toys") 
+        : deviceName(deviceName), pServer(nullptr), pService(nullptr), pCharacteristic(nullptr) {}
+
+    void setDataCallback(DataCallback callback);    // 设置数据回调函数
+    void sendNotification(const std::string& jsonStr);  // 发送通知
 };
 

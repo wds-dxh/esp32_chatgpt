@@ -1,11 +1,18 @@
+/*
+ * @Author: wds2dxh wdsnpshy@163.com
+ * @Date: 2025-01-13 17:00:31
+ * @Description: 
+ * Copyright (c) 2025 by ${wds2dxh}, All Rights Reserved. 
+ */
 #include "Bluetooth_Configuration_Wi_Fi/Bluetooth_Configuration_Wi_Fi.hpp"
 
-Bluetooth_Configuration_Wi_Fi::Bluetooth_Configuration_Wi_Fi(const String& deviceName) 
-    : deviceName(deviceName), pServer(nullptr), pService(nullptr), pCharacteristic(nullptr) {}
+// 删除旧的构造函数
+// Bluetooth_Configuration_Wi_Fi::Bluetooth_Configuration_Wi_Fi(const String& deviceName)...
 
 Bluetooth_Configuration_Wi_Fi::CharacteristicCallbacks::CharacteristicCallbacks(Bluetooth_Configuration_Wi_Fi *p) 
     : parent(p) {}
 
+//设置回调函数
 void Bluetooth_Configuration_Wi_Fi::CharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
     std::string receivedData = pCharacteristic->getValue();
     if (parent->dataCallback) {
@@ -14,7 +21,7 @@ void Bluetooth_Configuration_Wi_Fi::CharacteristicCallbacks::onWrite(BLECharacte
 }
 
 void Bluetooth_Configuration_Wi_Fi::begin() {
-    BLEDevice::init(deviceName.c_str());
+    BLEDevice::init(deviceName.c_str());  // 使用构造时设置的设备名称
     pServer = BLEDevice::createServer();
     pService = pServer->createService(SERVICE_UUID);
     pCharacteristic = pService->createCharacteristic(
@@ -32,9 +39,8 @@ void Bluetooth_Configuration_Wi_Fi::begin() {
     Serial.println("BLE配网服务已启动");
 }
 
-void Bluetooth_Configuration_Wi_Fi::sendNotification(const MessageProtocol::ResponseMessage& message) {
+void Bluetooth_Configuration_Wi_Fi::sendNotification(const std::string& jsonStr) {
     if (pCharacteristic) {
-        std::string jsonStr = message.toJSON();
         pCharacteristic->setValue(jsonStr);
         pCharacteristic->notify();
     }

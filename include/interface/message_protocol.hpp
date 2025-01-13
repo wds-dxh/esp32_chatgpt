@@ -1,40 +1,60 @@
+/*
+ * @Author: wds2dxh wdsnpshy@163.com
+ * @Date: 2025-01-13 17:00:31
+ * @Description: 
+ * Copyright (c) 2025 by ${wds2dxh}, All Rights Reserved. 
+ */
 #ifndef MESSAGE_PROTOCOL_HPP
 #define MESSAGE_PROTOCOL_HPP
 
 #include <string>
 #include <ArduinoJson.h>
 
-// 命名空间封装消息协议
+/**
+ * @brief 消息协议命名空间
+ * 封装所有与消息通信相关的数据结构和工具函数
+ */
 namespace MessageProtocol {
 
-    // 状态枚举
+    /**
+     * @brief 操作状态枚举
+     * 用于表示操作的执行结果
+     */
     enum class Status {
         OK,        // 操作成功
         NOT_OK     // 操作失败
     };
 
-    // 将状态枚举转换为字符串的工具函数
-    inline std::string statusToString(Status status) {
-        return status == Status::OK ? "OK" : "NOT_OK";
-    }
+    /**
+     * @brief 消息数据结构
+     * 使用结构体封装消息相关字段，提供更好的数据组织
+     */
+    struct MessageData {
+        std::string type;           // 消息类型
+        Status status;              // 操作状态
+        std::string errorMessage;   // 错误信息
 
-    // 响应消息类
-    class ResponseMessage {
-    public:
-        std::string type;       // 消息类型
-        Status status;          // 操作状态
-        std::string errorMessage; // 错误信息
+        // 构造函数，提供默认值
+        MessageData(const std::string& t = "", 
+                   Status s = Status::OK,
+                   const std::string& err = "")
+            : type(t), status(s), errorMessage(err) {}
+    };
 
-        // 构造函数
-        ResponseMessage(const std::string& type, Status status, const std::string& errorMessage)
-            : type(type), status(status), errorMessage(errorMessage) {}
+    /**
+     * @brief 消息处理类
+     * 提供消息序列化和反序列化功能
+     */
+    struct MessageHandler {
+        static std::string statusToString(Status status) {
+            return status == Status::OK ? "OK" : "NOT_OK";
+        }
 
-        // 将消息序列化为 JSON 格式
-        std::string toJSON() const {
-            JsonDocument doc;  // 更新为新的 JsonDocument
-            doc["type"] = type;
-            doc["status"] = statusToString(status);
-            doc["error_message"] = errorMessage;
+        static std::string serialize(const MessageData& data) {
+            JsonDocument doc;
+            doc["type"] = data.type;
+            doc["status"] = statusToString(data.status);
+            doc["error_message"] = data.errorMessage;
 
             std::string json;
             serializeJson(doc, json);
@@ -42,6 +62,6 @@ namespace MessageProtocol {
         }
     };
 
-} 
+} // namespace MessageProtocol
 
 #endif // MESSAGE_PROTOCOL_HPP
