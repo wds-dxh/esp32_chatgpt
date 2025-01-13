@@ -2,7 +2,7 @@
 Author: wds-dxh wdsnpshy@163.com
 Date: 2024-12-09 01:45:20
 LastEditors: Please set LastEditors
-LastEditTime: 2025-01-13 15:50:28
+LastEditTime: 2025-01-13 21:04:46
 FilePath: /arduino-esp32/test.py
 Description: 第一个版本测试蓝牙配网
 微信: 15310638214 

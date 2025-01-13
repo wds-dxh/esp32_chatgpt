@@ -2,7 +2,7 @@
  * @Author: wds-Ubuntu22-cqu wdsnpshy@163.com
  * @Date: 2024-11-20 18:34:23
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-01-13 20:07:38
+ * @LastEditTime: 2025-01-13 23:57:39
  * @FilePath: /arduino-esp32/src/main.cpp
  * @Description: 
  * 微信: 15310638214 
@@ -10,13 +10,32 @@
  * Copyright (c) 2024 by ${wds-Ubuntu22-cqu}, All Rights Reserved. 
  */
 #include <WiFi.h>
-#include "app/Wifi_pair.hpp"
+#include "WiFi_Network_Configuration/WiFi_Network_Configuration.hpp"    //文件名称不更改是因为改了会报错，稀奇古怪的错误
+#include "Bluetooth_Configuration_Wi_Fi/Bluetooth_Configuration_Wi_Fi.hpp"
 
 
-APP::WifiPair wifiPair;
+WiFi_Network_Configuration webServer("AI-toys", "12345678");
+Bluetooth_Configuration_Wi_Fi bluetooth("ai-toys");
+
+
 void setup() {
+    Serial.begin(115200);
+    delay(1000); // 添加短暂延迟以确保系统稳定
     
-    wifiPair.begin();        // 显式初始化
+    if(!webServer.connectWifi())
+    { 
+
+        //开启蓝牙配网
+        Serial.println("开启蓝牙配网");
+        bluetooth.begin();
+
+        Serial.println("链接wifi失败，进入web服务器");
+        webServer.openweb(true);
+    }
+    else
+    {
+        Serial.println("wifi链接成功");
+    }
 }
 
 void loop() {

@@ -18,11 +18,18 @@ bool WiFi_Network_Configuration::connectWifi()
         while (WiFi.status() != WL_CONNECTED && count < 10) {
             vTaskDelay(100);
             count++;
+            if (count == 3) {
+                count = 0;
+                Serial.println("WiFi连接超时.....");
+                break;
+            }
         }
         if(WiFi.status() == WL_CONNECTED) {
             return true;
         }
     }
+    //设置为AP模式
+    WiFi.mode(WIFI_AP);
     return false;
 }
 

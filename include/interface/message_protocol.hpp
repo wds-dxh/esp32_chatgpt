@@ -51,7 +51,7 @@ namespace MessageProtocol {
         }
 
         static std::string serialize(const MessageData& data) {
-            JsonDocument doc;
+            DynamicJsonDocument doc(256);
             doc["type"] = data.type;
             doc["status"] = statusToString(data.status);
             doc["error_message"] = data.errorMessage;
