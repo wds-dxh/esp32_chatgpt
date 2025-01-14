@@ -3,10 +3,10 @@
 
 // 
 Bluetooth_Configuration_Wi_Fi::Bluetooth_Configuration_Wi_Fi(String deviceName) 
-    : deviceName(deviceName), pServer(nullptr), pService(nullptr), pCharacteristic(nullptr) {}
+    : deviceName(deviceName), pServer(nullptr), pService(nullptr), pWriteCharacteristic(nullptr), pNotifyCharacteristic(nullptr) {}
 
 // 回调类构造函数实现
-Bluetooth_Configuration_Wi_Fi::CharacteristicCallbacks::CharacteristicCallbacks(Bluetooth_Configuration_Wi_Fi *p) 
+Bluetooth_Configuration_Wi_Fi::Bluetooth_Configuration_Wi_Fi::CharacteristicCallbacks::CharacteristicCallbacks(Bluetooth_Configuration_Wi_Fi *p) 
     : parent(p) {}
 
 // 回调类的onWrite方法实现
@@ -17,7 +17,7 @@ void Bluetooth_Configuration_Wi_Fi::CharacteristicCallbacks::onWrite(BLECharacte
 
 // 处理接收数据的方法实现
 void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) {
-    StaticJsonDocument<256> doc;
+    JsonDocument doc;  // 使用新的 JsonDocument 替代废弃的 StaticJsonDocument
     DeserializationError error = deserializeJson(doc, data);
 
     if (error) {
@@ -30,8 +30,8 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
         MessageProtocol::MessageData response("wifi_config");
         response.status = MessageProtocol::Status::OK;
         std::string responseJson = MessageProtocol::MessageHandler::serialize(response);
-        pCharacteristic->setValue(responseJson);
-        pCharacteristic->notify();
+        pNotifyCharacteristic->setValue(responseJson);
+        pNotifyCharacteristic->notify();
         return;
     }
 
@@ -111,8 +111,8 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
 
         // 序列化响应消息并发送
         std::string responseJson = MessageProtocol::MessageHandler::serialize(response);
-        pCharacteristic->setValue(responseJson);
-        pCharacteristic->notify();
+        pNotifyCharacteristic->setValue(responseJson);
+        pNotifyCharacteristic->notify();
     } else {
         Serial.println("收到无效数据");
     }
@@ -125,6 +125,14 @@ Bluetooth_Configuration_Wi_Fi::ServerCallbacks::ServerCallbacks(Bluetooth_Config
 // 服务器回调类实现
 void Bluetooth_Configuration_Wi_Fi::ServerCallbacks::onConnect(BLEServer* pServer) {
     Serial.println("蓝牙设备已连接");
+    
+    // 发送连接确认消息
+    MessageProtocol::MessageData response("connection");
+    response.status = MessageProtocol::Status::OK;
+    response.errorMessage = "Connected successfully";
+    std::string responseJson = MessageProtocol::MessageHandler::serialize(response);
+    parent->pNotifyCharacteristic->setValue(responseJson);
+    parent->pNotifyCharacteristic->notify();
 }
 
 void Bluetooth_Configuration_Wi_Fi::ServerCallbacks::onDisconnect(BLEServer* pServer) {
@@ -144,14 +152,24 @@ void Bluetooth_Configuration_Wi_Fi::begin() {
     // 创建BLE服务
     pService = pServer->createService(SERVICE_UUID);
 
-    // 创建BLE特征值
-    pCharacteristic = pService->createCharacteristic(
-        CHAR_UUID,
+    // 创建写入特征值
+    pWriteCharacteristic = pService->createCharacteristic(
+        WRITE_CHAR_UUID,
         BLECharacteristic::PROPERTY_WRITE
     );
 
+    // 创建通知特征值
+    pNotifyCharacteristic = pService->createCharacteristic(
+        NOTIFY_CHAR_UUID,
+        BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ
+    );
+    
+    // 为通知特征值创建描述符
+    BLEDescriptor* pDescriptor = new BLEDescriptor(BLEUUID((uint16_t)0x2902));
+    pNotifyCharacteristic->addDescriptor(pDescriptor);
+
     // 设置写入事件的回调
-    pCharacteristic->setCallbacks(new CharacteristicCallbacks(this));
+    pWriteCharacteristic->setCallbacks(new CharacteristicCallbacks(this));
 
     // 启动服务
     pService->start();

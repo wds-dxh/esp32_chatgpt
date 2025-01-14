@@ -51,7 +51,7 @@ namespace MessageProtocol {
         }
 
         static std::string serialize(const MessageData& data) {
-            DynamicJsonDocument doc(256);
+            JsonDocument doc;  // 使用新的 JsonDocument 替代废弃的 DynamicJsonDocument
             doc["type"] = data.type;
             doc["status"] = statusToString(data.status);
             doc["error_message"] = data.errorMessage;

@@ -15,9 +15,7 @@ class BLEConfig:
         self.notify_characteristic = None
         self.notification_received = asyncio.Event()
         self.last_notification = None
-        self.SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab"
-        self.CHAR_UUID = "12345678-1234-1234-1234-1234567890cd"
-        self.retry_count = 3  # 添加重试次数
+        self.retry_count = 3
 
     def notification_handler(self, sender, data):
         """处理从设备接收到的通知"""
@@ -56,15 +54,24 @@ class BLEConfig:
         return False
 
     async def find_characteristics(self, client):
-        """查找特定UUID的特征值"""
+        """动态查找可用的特征值"""
         for service in client.services:
-            if service.uuid.lower() == self.SERVICE_UUID.lower():
-                for char in service.characteristics:
-                    if char.uuid.lower() == self.CHAR_UUID.lower():
-                        self.write_characteristic = char
-                        self.notify_characteristic = char  # 同一个特征值同时支持写入和通知
-                        return True
-        return False
+            print(f"发现服务: {service.uuid}")
+            for char in service.characteristics:
+                print(f"  特征值: {char.uuid}")
+                print(f"  属性: {char.properties}")
+                
+                # 查找具有写入权限的特征值
+                if "write" in char.properties:
+                    print(f"找到写入特征值: {char.uuid}")
+                    self.write_characteristic = char
+                    
+                # 查找具有notify权限的特征值
+                if "notify" in char.properties:
+                    print(f"找到通知特征值: {char.uuid}")
+                    self.notify_characteristic = char
+
+        return self.write_characteristic is not None and self.notify_characteristic is not None
 
     async def connect_and_configure(self, wifi_ssid, wifi_password, timeout=30):
         """连接设备并发送WiFi配置"""
@@ -82,20 +89,21 @@ class BLEConfig:
                     await asyncio.sleep(2)
                     
                     if not await self.find_characteristics(client):
-                        print("未找到目标特征值")
+                        print("未找到所需的特征值")
                         continue
 
-                    # 配置通知前多等待一会
+                    # 配置通知前等待
                     await asyncio.sleep(2)
                     
                     try:
                         await client.start_notify(
-                            self.write_characteristic.uuid,
+                            self.notify_characteristic.uuid,
                             self.notification_handler
                         )
                         print("通知已启用")
                     except Exception as e:
-                        print(f"启用通知失败 (尝试继续): {e}")
+                        print(f"启用通知失败: {e}")
+                        continue
 
                     # 发送配置并等待响应
                     await self.send_config_and_wait(client, wifi_ssid, wifi_password, timeout)
@@ -103,7 +111,7 @@ class BLEConfig:
 
             except Exception as e:
                 print(f"连接尝试 {attempt + 1} 失败: {e}")
-                await asyncio.sleep(2)  # 失败后等待
+                await asyncio.sleep(2)
 
         print("所有连接尝试均失败")
         return False

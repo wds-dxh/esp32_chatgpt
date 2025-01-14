@@ -13,6 +13,8 @@ private:
     BLEServer *pServer;                // BLE服务器指针
     BLEService *pService;              // BLE服务指针
     BLECharacteristic *pCharacteristic;// BLE特征值指针
+    BLECharacteristic *pWriteCharacteristic;
+    BLECharacteristic *pNotifyCharacteristic;
 
     // 设备名称
     String deviceName = "ESP32-BLE-Config";
@@ -20,6 +22,8 @@ private:
     // BLE服务和特征值的UUID
     const char *SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
     const char *CHAR_UUID = "12345678-1234-1234-1234-1234567890cd";
+    const char* WRITE_CHAR_UUID = "12345678-1234-1234-1234-1234567890cd";
+    const char* NOTIFY_CHAR_UUID = "12345678-1234-1234-1234-1234567890ef";
 
     // 处理BLE特征值写入的回调类
     class CharacteristicCallbacks : public BLECharacteristicCallbacks {
