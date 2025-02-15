@@ -1,6 +1,7 @@
 #include "Bluetooth_Configuration_Wi_Fi/Bluetooth_Configuration_Wi_Fi.hpp"
 #include "interface/message_protocol.hpp"
 
+int role = 0; 
 // 
 Bluetooth_Configuration_Wi_Fi::Bluetooth_Configuration_Wi_Fi(String deviceName) 
     : deviceName(deviceName), pServer(nullptr), pService(nullptr), pWriteCharacteristic(nullptr), pNotifyCharacteristic(nullptr) {}
@@ -22,6 +23,20 @@ void Bluetooth_Configuration_Wi_Fi::handleReceivedData(const std::string &data) 
 
     if (error) {
         Serial.println("JSON解析失败");
+        return;
+    }
+
+    // 设置角色消息
+    if (doc["type"] == "set_role") {
+        role = doc["role"];
+        Serial.printf("角色已设置为: %d\n", role);
+        
+        // 创建并发送响应消息
+        MessageProtocol::MessageData response("set_role");
+        response.status = MessageProtocol::Status::OK;
+        std::string responseJson = MessageProtocol::MessageHandler::serialize(response);
+        pNotifyCharacteristic->setValue(responseJson);
+        pNotifyCharacteristic->notify();
         return;
     }
 
