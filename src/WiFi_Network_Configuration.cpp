@@ -16,7 +16,7 @@ bool WiFi_Network_Configuration::connectWifi()
         WiFi.begin(wifi.first.c_str(), wifi.second.c_str());
         int count = 0;
         while (WiFi.status() != WL_CONNECTED && count < 10) {
-            vTaskDelay(100);
+            vTaskDelay(500);
             count++;
             if (count == 3) {
                 count = 0;
@@ -28,8 +28,8 @@ bool WiFi_Network_Configuration::connectWifi()
             return true;
         }
     }
-    //设置为AP模式
-    WiFi.mode(WIFI_AP);
+    // //设置为AP模式
+    // WiFi.mode(WIFI_AP);
     return false;
 }
 
